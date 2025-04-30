@@ -1,76 +1,57 @@
 use axum::Router;
-use axum::extract::ws::{Message, Utf8Bytes, WebSocket, WebSocketUpgrade};
-use axum::response::Html;
-use axum::routing::get;
+use axum::routing::{any, get};
+use chrono::{DateTime, Local};
 use color_eyre::eyre::Report;
-use futures::SinkExt;
-use futures::stream::StreamExt;
-use std::net::Ipv4Addr;
-use tokio::{net::TcpListener, sync::broadcast};
+use error_layer::ErrorLayer;
+use std::fmt;
+use std::{net::Ipv4Addr, sync::Arc};
+use tokio::net::TcpListener;
+use tokio::sync::{RwLock, broadcast};
 
-#[tokio::main]
-async fn main() -> Result<(), Report> {
-    let (tx, _rx) = broadcast::channel::<String>(100);
+pub const BROADCAST_CHANNEL_CAPACITY: usize = 256;
 
-    let app = Router::new().route("/", get(show_chat_page)).route(
-        "/ws",
-        get(move |ws: WebSocketUpgrade| {
-            let tx = tx.clone();
-            async move { ws.on_upgrade(move |socket| handle_socket(socket, tx)) }
-        }),
-    );
+pub mod endpoints;
+pub mod error_layer;
 
-    let addr = Ipv4Addr::UNSPECIFIED;
-    let listener = TcpListener::bind((addr, 3000)).await?;
-    axum::serve(listener, app).await?;
-
-    Ok(())
+#[derive(Debug, Clone)]
+#[must_use]
+pub struct Message {
+    timestamp: DateTime<Local>,
+    text: String,
 }
 
-async fn handle_socket(socket: WebSocket, tx: broadcast::Sender<String>) {
-    let mut rx = tx.subscribe();
-    let (mut sender, mut receiver) = socket.split();
-
-    tokio::spawn(async move {
-        while let Ok(message) = rx.recv().await {
-            let utf8_bytes = Utf8Bytes::from(message);
-            if sender.send(Message::Text(utf8_bytes)).await.is_err() {
-                break;
-            }
-        }
-    });
-
-    while let Some(Ok(Message::Text(message))) = receiver.next().await {
-        let _ = tx.send(message.to_string());
+impl fmt::Display for Message {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: {}", self.timestamp.to_rfc2822(), self.text)
     }
 }
 
-async fn show_chat_page() -> Html<&'static str> {
-    Html(
-        r#"<!DOCTYPE html>
-        <html>
-        <body>
-            <ul id="chat"></ul>
-            <input id="msg" placeholder="type a message">
-            <script>
-                const ws = new WebSocket("ws://" + location.host + "/ws");
-                const chat = document.getElementById("chat");
-                const input = document.getElementById("msg");
+#[derive(Debug, Clone)]
+#[must_use]
+struct SharedState {
+    messages: Arc<RwLock<Vec<Message>>>,
+    broadcast_tx: broadcast::Sender<Message>,
+}
 
-                ws.onmessage = (event) => {
-                    const li = document.createElement("li");
-                    li.textContent = event.data;
-                    chat.appendChild(li);
-                };
+#[tokio::main]
+async fn main() -> Result<(), Report> {
+    ErrorLayer.setup()?;
 
-                input.addEventListener("keydown", e => {
-                    if (e.key === "Enter") {
-                        ws.send(input.value);
-                        input.value = "";
-                    }
-                });
-            </script>
-        </body>
-        </html>"#,
-    )
+    let (broadcast_tx, _) = broadcast::channel::<Message>(BROADCAST_CHANNEL_CAPACITY);
+    let shared_state = SharedState {
+        messages: Arc::new(RwLock::new(vec![])),
+        broadcast_tx,
+    };
+
+    let app = Router::new()
+        .route("/", get(endpoints::root))
+        .route("/ws", any(endpoints::websocket))
+        .with_state(shared_state);
+
+    let addr = Ipv4Addr::UNSPECIFIED;
+    let listener = TcpListener::bind((addr, 3000)).await?;
+    tracing::info!(local_addr = ?listener.local_addr()?, "Server started");
+    axum::serve(listener, app).await?;
+
+    Ok(())
 }
