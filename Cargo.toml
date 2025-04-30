@@ -1,0 +1,26 @@
+[package]
+name = "os3-chat"
+version = "0.1.0"
+edition = "2021"
+authors = ["mxxntype <59417007+mxxntype@users.noreply.github.com>"]
+description = "Server-side HTML chat service with file uploads"
+
+# NOTE: Generated, no unsafe by default.
+#
+# If you intend on writing unsafe, remove it from here.
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+correctness = "warn"
+suspicious = "warn"
+style = "warn"
+pedantic = "warn"
+nursery = "warn"
+complexity = "warn"
+perf = "warn"
+enum_glob_use = { level = "warn", priority = 1 }
+single_match_else = { level = "allow", priority = 1 }
+match_bool = { level = "allow", priority = 1 }
+
+[dependencies]
