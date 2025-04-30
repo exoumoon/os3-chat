@@ -1,13 +1,9 @@
 [package]
 name = "os3-chat"
 version = "0.1.0"
-edition = "2021"
-authors = ["mxxntype <59417007+mxxntype@users.noreply.github.com>"]
+edition = "2024"
 description = "Server-side HTML chat service with file uploads"
 
-# NOTE: Generated, no unsafe by default.
-#
-# If you intend on writing unsafe, remove it from here.
 [lints.rust]
 unsafe_code = "forbid"
 
@@ -24,3 +20,13 @@ single_match_else = { level = "allow", priority = 1 }
 match_bool = { level = "allow", priority = 1 }
 
 [dependencies]
+axum = { version = "0.8.4", features = ["macros", "ws"] }
+color-eyre = "0.6.3"
+futures = "0.3.31"
+tokio = { version = "1.44.2", default-features = false, features = [
+    "rt-multi-thread",
+    "macros",
+] }
+tracing = "0.1.41"
+tracing-error = "0.2.1"
+tracing-subscriber = { version = "0.3.19", features = ["fmt", "env-filter"] }
