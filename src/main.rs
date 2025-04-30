@@ -1,5 +1,5 @@
 use axum::Router;
-use axum::extract::ws::{WebSocket, WebSocketUpgrade};
+use axum::extract::ws::{Message, Utf8Bytes, WebSocket, WebSocketUpgrade};
 use axum::response::Html;
 use axum::routing::get;
 use color_eyre::eyre::Report;
@@ -27,10 +27,27 @@ async fn main() -> Result<(), Report> {
     Ok(())
 }
 
+async fn handle_socket(socket: WebSocket, tx: broadcast::Sender<String>) {
+    let mut rx = tx.subscribe();
+    let (mut sender, mut receiver) = socket.split();
+
+    tokio::spawn(async move {
+        while let Ok(message) = rx.recv().await {
+            let utf8_bytes = Utf8Bytes::from(message);
+            if sender.send(Message::Text(utf8_bytes)).await.is_err() {
+                break;
+            }
+        }
+    });
+
+    while let Some(Ok(Message::Text(message))) = receiver.next().await {
+        let _ = tx.send(message.to_string());
+    }
+}
+
 async fn show_chat_page() -> Html<&'static str> {
     Html(
-        r#"
-        <!DOCTYPE html>
+        r#"<!DOCTYPE html>
         <html>
         <body>
             <ul id="chat"></ul>
@@ -54,30 +71,6 @@ async fn show_chat_page() -> Html<&'static str> {
                 });
             </script>
         </body>
-        </html>
-    "#,
+        </html>"#,
     )
-}
-
-async fn handle_socket(socket: WebSocket, tx: broadcast::Sender<String>) {
-    let mut rx = tx.subscribe();
-    let (mut sender, mut receiver) = socket.split();
-
-    // Spawn task to receive from broadcast and send to WebSocket
-    tokio::spawn(async move {
-        while let Ok(msg) = rx.recv().await {
-            if sender
-                .send(axum::extract::ws::Message::Text(msg.into()))
-                .await
-                .is_err()
-            {
-                break;
-            }
-        }
-    });
-
-    // Receive messages from WebSocket and broadcast them
-    while let Some(Ok(axum::extract::ws::Message::Text(msg))) = receiver.next().await {
-        let _ = tx.send(msg.to_string());
-    }
 }
