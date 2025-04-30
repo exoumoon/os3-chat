@@ -45,7 +45,7 @@ async fn main() -> Result<(), Report> {
 
     let app = Router::new()
         .route("/", get(endpoints::root))
-        .route("/ws", any(endpoints::websocket))
+        .route("/websocket", any(endpoints::websocket))
         .with_state(shared_state);
 
     let addr = Ipv4Addr::UNSPECIFIED;

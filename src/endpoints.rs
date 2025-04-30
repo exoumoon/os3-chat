@@ -17,9 +17,9 @@ pub async fn root() -> Html<&'static str> {
         <html>
         <body>
             <ul id="chat"></ul>
-            <input id="msg" placeholder="type a message">
+            <input id="msg" placeholder="...">
             <script>
-                const ws = new WebSocket("ws://" + location.host + "/ws");
+                const ws = new WebSocket("ws://" + location.host + "/websocket");
                 const chat = document.getElementById("chat");
                 const input = document.getElementById("msg");
 
