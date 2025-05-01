@@ -2,25 +2,23 @@ use crate::models;
 use crate::state::SharedState;
 use axum::body::Body;
 use axum::extract::ws::{Message, Utf8Bytes};
-use axum::extract::{ConnectInfo, State, WebSocketUpgrade};
+use axum::extract::{State, WebSocketUpgrade};
 use axum::http::Response;
 use axum::response::Html;
 use chrono::Local;
 use futures::{SinkExt, StreamExt};
-use std::net::SocketAddr;
 use std::sync::Arc;
 use tracing::instrument;
 
 #[axum::debug_handler]
-#[instrument]
-pub async fn root(client_socket: ConnectInfo<SocketAddr>) -> Html<&'static str> {
+pub async fn root() -> Html<&'static str> {
     tracing::trace!("Serving root page");
     let html = indoc::indoc! {r#"
         <!DOCTYPE html>
         <html>
         <body>
-            <ul id="messages"></ul>
             <input id="message_text_input" placeholder="...">
+            <ul id="messages"></ul>
             <script>
                 const websocket = new WebSocket("ws://" + location.host + "/websocket");
                 const chat = document.getElementById("messages");
@@ -29,11 +27,11 @@ pub async fn root(client_socket: ConnectInfo<SocketAddr>) -> Html<&'static str> 
                 websocket.onmessage = (event) => {
                     const new_message = document.createElement("li");
                     new_message.textContent = event.data;
-                    chat.appendChild(new_message);
+                    chat.prepend(new_message);
                 };
 
                 input.addEventListener("keydown", event => {
-                    if (event.key === "Enter") {
+                    if (event.key === "Enter" && input.value) {
                         websocket.send(input.value);
                         input.value = "";
                     }
@@ -69,14 +67,12 @@ pub async fn websocket(
                 tracing::debug!(data = ?message, "RECV on local broadcast");
                 let text = format!("{}: {}", message.timestamp.to_rfc2822(), message.text);
                 let utf8_bytes = Utf8Bytes::from(text);
-                if websocket_tx
-                    .send(Message::Text(utf8_bytes))
-                    .await
-                    .inspect(|()| tracing::debug!("Websocket TX ok"))
-                    .inspect_err(|error| tracing::error!(?error, "Websocket TX failed"))
-                    .is_err()
-                {
-                    break;
+                match websocket_tx.send(Message::Text(utf8_bytes)).await {
+                    Ok(()) => tracing::debug!("Websocket TX ok"),
+                    Err(error) => {
+                        tracing::error!(?error, "Websocket TX failed");
+                        break;
+                    }
                 }
             }
         });

@@ -1,9 +1,9 @@
 #![allow(clippy::missing_errors_doc)]
 
+use crate::state::SharedState;
 use axum::Router;
 use axum::routing::{any, get};
 use clap::Parser;
-use state::SharedState;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -11,7 +11,7 @@ use tokio::sync::{RwLock, broadcast};
 use tracing::instrument;
 
 pub mod endpoints;
-pub mod error_layer;
+pub mod layers;
 pub mod models;
 pub mod state;
 
@@ -36,13 +36,12 @@ pub async fn run(settings: Settings) -> Result<(), color_eyre::eyre::Report> {
     let router = Router::new()
         .route("/", get(endpoints::root))
         .route("/websocket", any(endpoints::websocket))
-        .with_state(shared_state);
+        .with_state(shared_state)
+        .layer(layers::trace_layer());
 
     let listener = TcpListener::bind(settings.socket_addr).await?;
     tracing::info!(listen_addr = ?listener.local_addr()?, "Bound to local socket");
-
-    let service = router.into_make_service_with_connect_info::<SocketAddr>();
-    axum::serve(listener, service)
+    axum::serve(listener, router)
         .with_graceful_shutdown(self::shutdown_signal())
         .await?;
 

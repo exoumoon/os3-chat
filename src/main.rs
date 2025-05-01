@@ -1,6 +1,6 @@
 use clap::Parser;
 use color_eyre::eyre::Report;
-use os3_chat::{Settings, error_layer::ErrorLayer};
+use os3_chat::{Settings, layers::ErrorLayer};
 
 #[tokio::main]
 async fn main() -> Result<(), Report> {
