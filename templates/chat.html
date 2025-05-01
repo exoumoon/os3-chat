@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+</head>
+<body>
+    <input id="message_text_input" placeholder="..." />
+    <ul id="messages">
+        {% for message in messages %}
+            <li>{{ message }}</li>
+        {% endfor %}
+    </ul>
+
+    <script>
+        const websocket = new WebSocket("ws://" + location.host + "/websocket");
+        const chat = document.getElementById("messages");
+        const input = document.getElementById("message_text_input");
+
+        websocket.onmessage = (event) => {
+            const new_message = document.createElement("li");
+            new_message.textContent = event.data;
+            chat.prepend(new_message);
+        };
+
+        input.addEventListener("keydown", event => {
+            if (event.key === "Enter" && input.value) {
+                websocket.send(input.value);
+                input.value = "";
+            }
+        });
+    </script>
+</body>
+</html>
