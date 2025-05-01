@@ -9,3 +9,5 @@ tarpaulin-report.html
 # Nix stuff.
 result
 .direnv/
+
+*.sqlite*

@@ -10,6 +10,8 @@ use chrono::Local;
 use futures::{SinkExt, StreamExt};
 use tracing::instrument;
 
+pub mod account;
+
 #[derive(Template)]
 #[template(path = "chat.html")]
 pub struct ChatTemplate {

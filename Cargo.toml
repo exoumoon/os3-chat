@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2024"
 description = "Server-side HTML chat service with file uploads"
 
+[[bin]]
+name = "os3_chat_server"
+path = "src/main.rs"
+
 [lints.rust]
 unsafe_code = "forbid"
 
@@ -20,14 +24,21 @@ single_match_else = { level = "allow", priority = 1 }
 match_bool = { level = "allow", priority = 1 }
 
 [dependencies]
+argon2 = "0.5.3"
 askama = "0.14.0"
 axum = { version = "0.8.4", features = ["macros", "ws"] }
-chrono = { version = "0.4.41", features = ["now"] }
+chrono = { version = "0.4.41", features = ["now", "serde"] }
 clap = { version = "4.5.37", features = ["derive"] }
 color-eyre = "0.6.3"
 futures = "0.3.31"
-indoc = "2.0.6"
-tokio = { version = "1.44.2", default-features = false, features = ["rt-multi-thread", "macros", "signal"] }
+rand_core = { version = "0.6.4", features = ["getrandom"] }
+serde = { version = "1.0.219", features = ["derive"] }
+sqlx = { version = "0.8.5", features = ["chrono", "runtime-tokio", "sqlite"] }
+tokio = { version = "1.44.2", default-features = false, features = [
+    "rt-multi-thread",
+    "macros",
+    "signal",
+] }
 tower-http = { version = "0.6.2", features = ["trace"] }
 tracing = "0.1.41"
 tracing-error = "0.2.1"

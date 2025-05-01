@@ -2,8 +2,9 @@
 
 use crate::state::SharedState;
 use axum::Router;
-use axum::routing::{any, get};
+use axum::routing::{any, get, post};
 use clap::Parser;
+use sqlx::SqlitePool;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -21,14 +22,19 @@ pub struct Settings {
     #[arg(default_value_t = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 3000))]
     pub socket_addr: SocketAddr,
 
+    #[arg(long("sqlite-db"), default_value_t = env!("DATABASE_URL").to_string())]
+    pub database_url: String,
+
     #[arg(long, default_value_t = 256)]
     pub broadcast_channel_capacity: usize,
 }
 
 #[instrument]
 pub async fn run(settings: Settings) -> Result<(), color_eyre::eyre::Report> {
+    let db_pool = SqlitePool::connect(&settings.database_url).await?;
     let (broadcast_tx, _) = broadcast::channel(settings.broadcast_channel_capacity);
     let shared_state = SharedState {
+        db_pool,
         messages: Arc::new(RwLock::new(vec![])),
         broadcast_tx,
     };
@@ -36,6 +42,8 @@ pub async fn run(settings: Settings) -> Result<(), color_eyre::eyre::Report> {
     let router = Router::new()
         .route("/", get(endpoints::root))
         .route("/websocket", any(endpoints::websocket))
+        .route("/account/register", post(endpoints::account::register))
+        .route("/account/login", post(endpoints::account::login))
         .with_state(shared_state)
         .layer(layers::trace_layer());
 
