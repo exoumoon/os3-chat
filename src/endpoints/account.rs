@@ -8,9 +8,48 @@ use std::borrow::Cow;
 use tracing::instrument;
 
 #[derive(Deserialize)]
+#[serde(try_from = "UncheckedCredentials")]
 pub struct Credentials {
     username: String,
     password: String,
+}
+
+impl Credentials {
+    pub const MIN_USERNAME_LEN: usize = 2;
+    pub const MIN_PASSWORD_LEN: usize = 8;
+}
+
+#[derive(Deserialize)]
+pub struct UncheckedCredentials {
+    username: String,
+    password: String,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum CredentialsError {
+    #[error("The provided username is too short")]
+    ShortUsername,
+    #[error("The provided password is too short")]
+    ShortPassword,
+}
+
+impl TryFrom<UncheckedCredentials> for Credentials {
+    type Error = CredentialsError;
+
+    fn try_from(unchecked_credentials: UncheckedCredentials) -> Result<Self, Self::Error> {
+        let trimmed_username = unchecked_credentials.username.trim();
+        if trimmed_username.len() < Self::MIN_USERNAME_LEN {
+            return Err(CredentialsError::ShortUsername);
+        }
+        if unchecked_credentials.password.len() < Self::MIN_PASSWORD_LEN {
+            return Err(CredentialsError::ShortPassword);
+        }
+
+        Ok(Self {
+            username: trimmed_username.to_string(),
+            password: unchecked_credentials.password,
+        })
+    }
 }
 
 #[instrument(skip(shared_state, credentials), fields(username = credentials.username))]
@@ -66,7 +105,7 @@ pub async fn login(
     .await
     .map_err(|error| match error {
         sqlx::Error::RowNotFound => {
-            tracing::warn!(?error, "Login failed");
+            tracing::warn!("Login failed: no account with such username");
             StatusCode::UNAUTHORIZED
         }
         _ => {
