@@ -1,44 +1,50 @@
-use crate::SharedState;
+use crate::models;
+use crate::state::SharedState;
 use axum::body::Body;
 use axum::extract::ws::{Message, Utf8Bytes};
-use axum::extract::{State, WebSocketUpgrade};
+use axum::extract::{ConnectInfo, State, WebSocketUpgrade};
 use axum::http::Response;
 use axum::response::Html;
 use chrono::Local;
 use futures::{SinkExt, StreamExt};
+use std::net::SocketAddr;
 use std::sync::Arc;
 use tracing::instrument;
 
+#[axum::debug_handler]
 #[instrument]
-pub async fn root() -> Html<&'static str> {
+pub async fn root(client_socket: ConnectInfo<SocketAddr>) -> Html<&'static str> {
     tracing::trace!("Serving root page");
-    Html(
-        r#"<!DOCTYPE html>
+    let html = indoc::indoc! {r#"
+        <!DOCTYPE html>
         <html>
         <body>
-            <ul id="chat"></ul>
-            <input id="msg" placeholder="...">
+            <ul id="messages"></ul>
+            <input id="message_text_input" placeholder="...">
             <script>
-                const ws = new WebSocket("ws://" + location.host + "/websocket");
-                const chat = document.getElementById("chat");
-                const input = document.getElementById("msg");
+                const websocket = new WebSocket("ws://" + location.host + "/websocket");
+                const chat = document.getElementById("messages");
+                const input = document.getElementById("message_text_input");
 
-                ws.onmessage = (event) => {
-                    const li = document.createElement("li");
-                    li.textContent = event.data;
-                    chat.appendChild(li);
+                websocket.onmessage = (event) => {
+                    const new_message = document.createElement("li");
+                    new_message.textContent = event.data;
+                    chat.appendChild(new_message);
                 };
 
-                input.addEventListener("keydown", e => {
-                    if (e.key === "Enter") {
-                        ws.send(input.value);
+                input.addEventListener("keydown", event => {
+                    if (event.key === "Enter") {
+                        websocket.send(input.value);
                         input.value = "";
                     }
                 });
             </script>
         </body>
-        </html>"#,
-    )
+        </html>
+        "#
+    };
+
+    Html(html)
 }
 
 #[axum::debug_handler]
@@ -79,7 +85,7 @@ pub async fn websocket(
             tracing::debug!(data = ?message, "RECV on websocket");
 
             let current_time = Local::now();
-            let message = crate::Message {
+            let message = models::Message {
                 timestamp: current_time,
                 text: message.to_string(),
             };
