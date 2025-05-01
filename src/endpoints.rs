@@ -65,8 +65,7 @@ pub async fn websocket(
 
             while let Ok(message) = broadcast_rx.recv().await {
                 tracing::debug!(data = ?message, "RECV on local broadcast");
-                let text = format!("{}: {}", message.timestamp.to_rfc2822(), message.text);
-                let utf8_bytes = Utf8Bytes::from(text);
+                let utf8_bytes = Utf8Bytes::from(message.to_string());
                 match websocket_tx.send(Message::Text(utf8_bytes)).await {
                     Ok(()) => tracing::debug!("Websocket TX ok"),
                     Err(error) => {
