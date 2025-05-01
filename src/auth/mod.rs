@@ -1,0 +1,79 @@
+use crate::state::SharedState;
+use axum::extract::{FromRef, FromRequestParts};
+use axum::http::{StatusCode, request::Parts};
+use axum::response::IntoResponse;
+use axum_extra::extract::{CookieJar, cookie::Cookie};
+use chrono::NaiveDateTime;
+use sqlx::query;
+use tracing::{Level, instrument};
+
+pub const SESSION_COOKIE_NAME: &str = "sessiont-token";
+
+#[derive(Debug)]
+#[must_use]
+pub struct Session(pub AuthorizedAccount);
+
+#[derive(Debug)]
+#[must_use]
+pub struct AuthorizedAccount {
+    pub username: String,
+    pub registered_at: NaiveDateTime,
+    pub session_id: i64,
+}
+
+impl<S> FromRequestParts<S> for Session
+where
+    SharedState: FromRef<S>,
+    S: Send + Sync,
+{
+    type Rejection = RejectionCause;
+
+    #[instrument(name = "auth_layer", skip_all, err(Debug, level = Level::WARN))]
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let state = SharedState::from_ref(state);
+        let cookies = CookieJar::from_headers(&parts.headers);
+        let session_token = cookies.get(SESSION_COOKIE_NAME).map(Cookie::value_trimmed);
+
+        if let Some(token) = session_token {
+            let session = query!("SELECT * FROM sessions WHERE token = ?", token)
+                .fetch_one(&state.db_pool)
+                .await
+                .map_err(|_| RejectionCause::InvalidSession)?;
+            let account_record = query!("SELECT * FROM accounts WHERE id = ?", session.account_id)
+                .fetch_one(&state.db_pool)
+                .await
+                .map_err(|_| RejectionCause::InvalidSession)?;
+
+            let authorized_account = AuthorizedAccount {
+                username: account_record.username,
+                registered_at: account_record.registered_at,
+                session_id: session.id,
+            };
+
+            tracing::debug!(?authorized_account, "Cookie authorization successful");
+            Ok(Self(authorized_account))
+        } else {
+            Err(RejectionCause::NoSessionCookie)
+        }
+    }
+}
+
+#[derive(Debug)]
+#[must_use]
+pub enum RejectionCause {
+    NoSessionCookie,
+    InvalidSession,
+    ExpiredSession,
+    InternalServerError,
+}
+
+impl IntoResponse for RejectionCause {
+    fn into_response(self) -> axum::response::Response {
+        match self {
+            Self::NoSessionCookie => (StatusCode::BAD_REQUEST, "No session cookie").into_response(),
+            Self::InvalidSession => (StatusCode::UNAUTHORIZED, "Invalid session").into_response(),
+            Self::ExpiredSession => (StatusCode::UNAUTHORIZED, "Expired session").into_response(),
+            Self::InternalServerError => (StatusCode::INTERNAL_SERVER_ERROR, "").into_response(),
+        }
+    }
+}

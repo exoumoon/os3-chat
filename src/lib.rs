@@ -2,6 +2,7 @@
 
 use crate::state::SharedState;
 use axum::Router;
+use axum::middleware::from_extractor_with_state;
 use axum::routing::{any, get, post};
 use clap::Parser;
 use sqlx::SqlitePool;
@@ -11,6 +12,7 @@ use tokio::net::TcpListener;
 use tokio::sync::{RwLock, broadcast};
 use tracing::instrument;
 
+pub mod auth;
 pub mod endpoints;
 pub mod layers;
 pub mod models;
@@ -33,19 +35,24 @@ pub struct Settings {
 pub async fn run(settings: Settings) -> Result<(), color_eyre::eyre::Report> {
     let db_pool = SqlitePool::connect(&settings.database_url).await?;
     let (broadcast_tx, _) = broadcast::channel(settings.broadcast_channel_capacity);
-    let shared_state = SharedState {
+    let state = SharedState {
         db_pool,
         messages: Arc::new(RwLock::new(vec![])),
         broadcast_tx,
     };
 
+    let protected_router = Router::new()
+        .route("/chat", get(endpoints::chat))
+        .route("/chat/websocket", any(endpoints::websocket))
+        .route_layer(from_extractor_with_state::<auth::Session, _>(state.clone()));
+
     let router = Router::new()
+        .merge(protected_router)
         .route("/", get(endpoints::root))
-        .route("/websocket", any(endpoints::websocket))
         .route("/account/register", post(endpoints::account::register))
         .route("/account/login", post(endpoints::account::login))
-        .with_state(shared_state)
-        .layer(layers::trace_layer());
+        .layer(layers::trace_layer())
+        .with_state(state);
 
     let listener = TcpListener::bind(settings.socket_addr).await?;
     tracing::info!(listen_addr = ?listener.local_addr()?, "Bound to local socket");

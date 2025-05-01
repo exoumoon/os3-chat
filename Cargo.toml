@@ -27,20 +27,23 @@ match_bool = { level = "allow", priority = 1 }
 argon2 = "0.5.3"
 askama = "0.14.0"
 axum = { version = "0.8.4", features = ["macros", "ws"] }
+axum-extra = { version = "0.10.1", features = ["cookie"] }
 chrono = { version = "0.4.41", features = ["now", "serde"] }
 clap = { version = "4.5.37", features = ["derive"] }
 color-eyre = "0.6.3"
 futures = "0.3.31"
 rand_core = { version = "0.6.4", features = ["getrandom"] }
 serde = { version = "1.0.219", features = ["derive"] }
-sqlx = { version = "0.8.5", features = ["chrono", "runtime-tokio", "sqlite"] }
+sqlx = { version = "0.8.5", features = ["chrono", "runtime-tokio", "sqlite", "uuid"] }
 thiserror = "2.0.12"
 tokio = { version = "1.44.2", default-features = false, features = [
     "rt-multi-thread",
     "macros",
     "signal",
 ] }
-tower-http = { version = "0.6.2", features = ["trace"] }
+tower = { version = "0.5.2", features = ["full"] }
+tower-http = { version = "0.6.2", features = ["add-extension", "trace"] }
 tracing = "0.1.41"
 tracing-error = "0.2.1"
 tracing-subscriber = { version = "0.3.19", features = ["fmt", "env-filter"] }
+uuid = { version = "1.16.0", features = ["v4"] }

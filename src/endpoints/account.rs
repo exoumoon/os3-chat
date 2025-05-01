@@ -1,11 +1,16 @@
+use crate::auth::SESSION_COOKIE_NAME;
 use crate::{models::Account, state::SharedState};
 use argon2::{Argon2, PasswordHash, password_hash::SaltString};
 use argon2::{PasswordHasher, PasswordVerifier};
-use axum::{Json, debug_handler, extract::State, http::StatusCode};
+use axum::response::Redirect;
+use axum::{Form, debug_handler, extract::State, http::StatusCode};
+use axum_extra::extract::CookieJar;
+use axum_extra::extract::cookie::{Cookie, SameSite};
 use rand_core::OsRng;
 use serde::Deserialize;
 use std::borrow::Cow;
 use tracing::instrument;
+use uuid::Uuid;
 
 #[derive(Deserialize)]
 #[serde(try_from = "UncheckedCredentials")]
@@ -56,8 +61,8 @@ impl TryFrom<UncheckedCredentials> for Credentials {
 #[debug_handler]
 pub async fn register(
     State(shared_state): State<SharedState>,
-    Json(credentials): Json<Credentials>,
-) -> Result<StatusCode, StatusCode> {
+    Form(credentials): Form<Credentials>,
+) -> Result<Redirect, StatusCode> {
     let salt = SaltString::generate(&mut OsRng);
     let password_hash = Argon2::default()
         .hash_password(credentials.password.as_bytes(), &salt)
@@ -87,15 +92,15 @@ pub async fn register(
         }
     })?;
 
-    Ok(StatusCode::CREATED)
+    Ok(Redirect::to("/"))
 }
 
 #[instrument(skip(shared_state, credentials), fields(username = credentials.username))]
 #[debug_handler]
 pub async fn login(
     State(shared_state): State<SharedState>,
-    Json(credentials): Json<Credentials>,
-) -> Result<StatusCode, StatusCode> {
+    Form(credentials): Form<Credentials>,
+) -> Result<(CookieJar, Redirect), StatusCode> {
     let account = sqlx::query_as!(
         Account,
         "SELECT * FROM accounts WHERE username = ?",
@@ -115,14 +120,31 @@ pub async fn login(
     })?;
 
     let stored_hash = PasswordHash::try_from(account.password_hash.as_str()).unwrap();
-    match Argon2::default().verify_password(credentials.password.as_bytes(), &stored_hash) {
-        Ok(()) => {
-            tracing::debug!("Login successful");
-            Ok(StatusCode::OK)
-        }
-        Err(error) => {
-            tracing::warn!(%error, "Login failed");
-            Err(StatusCode::UNAUTHORIZED)
-        }
+    if let Err(error) =
+        Argon2::default().verify_password(credentials.password.as_bytes(), &stored_hash)
+    {
+        tracing::warn!(%error, "Login failed");
+        return Err(StatusCode::UNAUTHORIZED);
     }
+
+    let session_token = Uuid::new_v4();
+    let session_token_string = session_token.to_string();
+    let created_session = sqlx::query!(
+        "INSERT INTO sessions (token, account_id) VALUES (?, ?) RETURNING token",
+        session_token_string,
+        account.id
+    )
+    .fetch_one(&shared_state.db_pool)
+    .await
+    .unwrap();
+
+    let base_cookie = Cookie::new(SESSION_COOKIE_NAME, created_session.token);
+    let cookie = Cookie::build(base_cookie)
+        .path("/")
+        .http_only(true)
+        .secure(false)
+        .same_site(SameSite::Lax);
+
+    let jar = CookieJar::new().add(cookie);
+    Ok((jar, Redirect::to("/chat")))
 }

@@ -11,21 +11,28 @@ pub struct Account {
 
 #[derive(sqlx::FromRow, Clone, Debug, PartialEq, Eq)]
 pub struct Session {
+    pub id: i64,
     pub token: String,
-    pub acccount_id: usize,
+    pub account_id: i64,
     pub created_at: NaiveDateTime,
-    pub expires_at: NaiveDateTime,
 }
 
 #[derive(Debug, Clone)]
 #[must_use]
 pub struct Message {
-    pub timestamp: DateTime<Local>,
     pub text: String,
+    pub sender_username: String,
+    pub timestamp: DateTime<Local>,
 }
 
 impl fmt::Display for Message {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[{}] {}", self.timestamp.to_rfc2822(), self.text)
+        write!(
+            f,
+            "[{} at {}]: {}",
+            self.sender_username,
+            self.timestamp.to_rfc2822(),
+            self.text
+        )
     }
 }

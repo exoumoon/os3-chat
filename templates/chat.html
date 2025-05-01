@@ -5,15 +5,17 @@
     <title>{{ title }}</title>
 </head>
 <body>
+    <p>Logged in as <b>{{ logged_in_as }}</b></p>
+
     <input id="message_text_input" placeholder="..." />
     <ul id="messages">
         {% for message in messages %}
-            <li>{{ message }}</li>
+            <li>{{ message | safe }}</li>
         {% endfor %}
     </ul>
 
     <script>
-        const websocket = new WebSocket("ws://" + location.host + "/websocket");
+        const websocket = new WebSocket("ws://" + location.host + "/chat/websocket");
         const chat = document.getElementById("messages");
         const input = document.getElementById("message_text_input");
 

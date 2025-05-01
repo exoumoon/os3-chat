@@ -1,11 +1,11 @@
-use crate::models;
-use crate::state::SharedState;
+use crate::auth::Session;
+use crate::{models, state::SharedState};
 use askama::Template;
-use axum::body::Body;
 use axum::extract::ws::{Message, Utf8Bytes};
 use axum::extract::{State, WebSocketUpgrade};
 use axum::http::{Response, StatusCode};
 use axum::response::{Html, IntoResponse};
+use axum::{body::Body, debug_handler};
 use chrono::Local;
 use futures::{SinkExt, StreamExt};
 use tracing::instrument;
@@ -13,20 +13,37 @@ use tracing::instrument;
 pub mod account;
 
 #[derive(Template)]
+#[template(path = "account.html")]
+pub struct AccountTemplate;
+
+#[derive(Template)]
 #[template(path = "chat.html")]
-pub struct ChatTemplate {
-    pub title: &'static str,
+pub struct ChatTemplate<'a> {
+    pub logged_in_as: &'a str,
+    pub title: &'a str,
     pub messages: Vec<crate::models::Message>,
 }
 
-#[axum::debug_handler]
-pub async fn root(
+#[instrument(skip_all)]
+#[debug_handler]
+pub async fn root() -> Result<impl IntoResponse, StatusCode> {
+    AccountTemplate
+        .render()
+        .map(Html)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+#[instrument(skip_all, fields(account = ?account))]
+#[debug_handler]
+pub async fn chat(
     State(shared_state): State<SharedState>,
+    Session(account): Session,
 ) -> Result<impl IntoResponse, StatusCode> {
-    tracing::trace!("Serving root page");
+    tracing::trace!("Serving chat page");
     let mut messages = shared_state.messages.read().await.clone();
     messages.reverse();
     let template = ChatTemplate {
+        logged_in_as: &account.username,
         title: env!("CARGO_CRATE_NAME"),
         messages,
     };
@@ -37,10 +54,11 @@ pub async fn root(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
 
-#[axum::debug_handler]
+#[debug_handler]
 #[instrument]
 pub async fn websocket(
     State(shared_state): State<SharedState>,
+    Session(account): Session,
     websocket_upgrade: WebSocketUpgrade,
 ) -> Response<Body> {
     websocket_upgrade.on_upgrade(|socket| async move {
@@ -67,8 +85,9 @@ pub async fn websocket(
 
             let current_time = Local::now();
             let message = models::Message {
-                timestamp: current_time,
                 text: message.to_string(),
+                sender_username: account.username.clone(),
+                timestamp: current_time,
             };
 
             shared_state.messages.write().await.push(message.clone());

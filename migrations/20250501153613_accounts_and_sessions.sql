@@ -6,9 +6,9 @@ CREATE TABLE accounts (
 );
 
 CREATE TABLE sessions (
-    token TEXT PRIMARY KEY,
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    token TEXT NOT NULL,
     account_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL,
-    expires_at TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(account_id) REFERENCES accounts(id)
 );
