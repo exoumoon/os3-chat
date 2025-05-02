@@ -50,7 +50,7 @@ where
                 session_id: session.id,
             };
 
-            tracing::debug!(?authorized_account, "Cookie authorization successful");
+            tracing::trace!(?authorized_account, "Cookie authorization successful");
             Ok(Self(authorized_account))
         } else {
             Err(RejectionCause::NoSessionCookie)

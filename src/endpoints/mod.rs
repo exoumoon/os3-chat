@@ -68,10 +68,10 @@ pub async fn websocket(
 
         tokio::spawn(async move {
             while let Ok(message) = broadcast_rx.recv().await {
-                tracing::debug!(data = ?message, "RECV on local broadcast");
+                tracing::trace!(data = ?message, "RECV on local broadcast");
                 let utf8_bytes = Utf8Bytes::from(message.to_string());
                 match websocket_tx.send(Message::Text(utf8_bytes)).await {
-                    Ok(()) => tracing::debug!("Websocket TX ok"),
+                    Ok(()) => tracing::trace!("Websocket TX ok"),
                     Err(error) => {
                         tracing::error!(?error, "Websocket TX failed");
                         break;
@@ -81,7 +81,7 @@ pub async fn websocket(
         });
 
         while let Some(Ok(Message::Text(message))) = websocket_rx.next().await {
-            tracing::debug!(data = ?message, "RECV on websocket");
+            tracing::trace!(data = ?message, "RECV on websocket");
 
             let current_time = Local::now();
             let message = models::Message {
@@ -93,7 +93,7 @@ pub async fn websocket(
             shared_state.messages.write().await.push(message.clone());
             let _ = broadcast_tx
                 .send(message)
-                .inspect(|recv_count| tracing::debug!(?recv_count, "Sent data to local broadcast"))
+                .inspect(|recv_count| tracing::trace!(?recv_count, "Sent data to local broadcast"))
                 .inspect_err(|error| tracing::error!(?error, "Local broadcast TX failed"));
         }
     })

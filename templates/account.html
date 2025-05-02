@@ -6,35 +6,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-[#121212] text-gray-100 font-sans p-6 space-y-8">
-    <div class="max-w-md mx-auto space-y-6">
-        <section class="bg-[#1e1e1e] p-6 rounded shadow border border-gray-700">
-            <h1 class="text-xl font-semibold mb-4 text-purple-300">Login</h1>
-            <form action="/account/login" method="post" class="space-y-3">
-                <input name="username" placeholder="Username" required
-                    class="w-full px-3 py-2 rounded bg-[#2a2a2a] text-gray-100 border border-gray-600 focus:ring-purple-600" />
-                <input name="password" type="password" placeholder="Password" required
-                    class="w-full px-3 py-2 rounded bg-[#2a2a2a] text-gray-100 border border-gray-600 focus:ring-purple-600" />
-                <button type="submit"
-                    class="w-full py-2 bg-purple-700 hover:bg-purple-800 rounded text-white font-semibold">
+<body class="bg-[#121212] text-gray-100 font-sans p-6">
+    <div class="max-w-md mx-auto bg-[#1e1e1e] p-6 rounded shadow border border-gray-700 space-y-4">
+        <h1 class="text-2xl font-semibold text-center text-purple-300">Welcome</h1>
+
+        <form action="/account/form/submit" method="post" class="space-y-4">
+            <input name="username" placeholder="Username" required
+                class="w-full px-3 py-2 rounded bg-[#2a2a2a] text-gray-100 border border-gray-600 focus:ring-purple-600" />
+            <input name="password" type="password" placeholder="Password" required
+                class="w-full px-3 py-2 rounded bg-[#2a2a2a] text-gray-100 border border-gray-600 focus:ring-purple-600" />
+
+            <div class="flex space-x-2">
+                <button type="submit" name="action" value="login"
+                    class="flex-1 py-2 bg-purple-700 hover:bg-purple-800 rounded text-white font-semibold">
                     Login
                 </button>
-            </form>
-        </section>
-
-        <section class="bg-[#1e1e1e] p-6 rounded shadow border border-gray-700">
-            <h1 class="text-xl font-semibold mb-4 text-green-300">Register</h1>
-            <form action="/account/register" method="post" class="space-y-3">
-                <input name="username" placeholder="Username" required
-                    class="w-full px-3 py-2 rounded bg-[#2a2a2a] text-gray-100 border border-gray-600 focus:ring-green-600" />
-                <input name="password" type="password" placeholder="Password" required
-                    class="w-full px-3 py-2 rounded bg-[#2a2a2a] text-gray-100 border border-gray-600 focus:ring-green-600" />
-                <button type="submit"
-                    class="w-full py-2 bg-green-700 hover:bg-green-800 rounded text-white font-semibold">
+                <button type="submit" name="action" value="register"
+                    class="flex-1 py-2 bg-green-700 hover:bg-green-800 rounded text-white font-semibold">
                     Register
                 </button>
-            </form>
-        </section>
+            </div>
+        </form>
     </div>
 </body>
 </html>

@@ -5,6 +5,7 @@ use axum::Router;
 use axum::middleware::from_extractor_with_state;
 use axum::routing::{any, get, post};
 use clap::Parser;
+use repository::Repository;
 use sqlx::SqlitePool;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
@@ -16,6 +17,7 @@ pub mod auth;
 pub mod endpoints;
 pub mod layers;
 pub mod models;
+pub mod repository;
 pub mod state;
 
 #[derive(Parser, Clone, Debug)]
@@ -36,6 +38,7 @@ pub async fn run(settings: Settings) -> Result<(), color_eyre::eyre::Report> {
     let db_pool = SqlitePool::connect(&settings.database_url).await?;
     let (broadcast_tx, _) = broadcast::channel(settings.broadcast_channel_capacity);
     let state = SharedState {
+        repository: Repository::new(db_pool.clone()),
         db_pool,
         messages: Arc::new(RwLock::new(vec![])),
         broadcast_tx,
@@ -49,8 +52,7 @@ pub async fn run(settings: Settings) -> Result<(), color_eyre::eyre::Report> {
     let router = Router::new()
         .merge(protected_router)
         .route("/", get(endpoints::root))
-        .route("/account/register", post(endpoints::account::register))
-        .route("/account/login", post(endpoints::account::login))
+        .route("/account/form/submit", post(endpoints::account::submit))
         .layer(layers::trace_layer())
         .with_state(state);
 

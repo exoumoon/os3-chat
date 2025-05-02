@@ -22,7 +22,7 @@ impl ErrorLayer {
             .with_writer(std::io::stderr);
 
         let crate_name = env!("CARGO_CRATE_NAME");
-        let default_rust_log = format!("{crate_name}=trace,axum::rejection=trace");
+        let default_rust_log = format!("{crate_name}=debug,axum::rejection=trace");
         let filter_layer =
             EnvFilter::try_from_default_env().or_else(|_| EnvFilter::try_new(default_rust_log))?;
 
