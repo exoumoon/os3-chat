@@ -1,0 +1,16 @@
+CREATE TABLE rooms (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE CHECK (length(name) > 0),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE messages (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    sender_account_id INTEGER NOT NULL,
+    room_id INTEGER NOT NULL,
+    content TEXT,
+    sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY(sender_account_id) REFERENCES accounts(id),
+    FOREIGN KEY(room_id) REFERENCES rooms(id)
+);
