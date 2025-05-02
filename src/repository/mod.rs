@@ -65,7 +65,7 @@ pub mod account {
                         if error.code().is_some_and(|code| CODE_NON_UNIQUE == code) =>
                     {
                         tracing::debug!(?error, "Rejecting registration: username is taken");
-                        RegistrationError::UsernameTaken
+                        RegistrationError::NameTaken
                     }
                     _ => {
                         tracing::error!(?error, "Database error during registration");
@@ -130,7 +130,7 @@ pub mod account {
     #[derive(Debug, thiserror::Error)]
     pub enum RegistrationError {
         #[error("An account with this username already exists")]
-        UsernameTaken,
+        NameTaken,
 
         #[error("Failed to hash the password")]
         Hash(argon2::password_hash::Error),

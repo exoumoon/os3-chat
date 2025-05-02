@@ -18,7 +18,7 @@ pub struct CredentialsForm {
     action: SubmitAction,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 #[must_use]
 pub enum SubmitAction {
@@ -40,44 +40,38 @@ pub async fn submit(
     State(state): State<SharedState>,
     Valid(credentials): Valid<Form<CredentialsForm>>,
 ) -> AuthResult {
-    match credentials.action {
-        SubmitAction::Register => {
-            let result = state
-                .repository
-                .accounts
-                .register(&credentials.username, &credentials.password)
-                .await;
-            match result {
-                Ok(_account) => AuthResult::Registered(Redirect::to("/")),
-                Err(RegistrationError::UsernameTaken) => AuthResult::Error(StatusCode::CONFLICT),
-                Err(_internal) => AuthResult::Error(StatusCode::INTERNAL_SERVER_ERROR),
-            }
+    if credentials.action == SubmitAction::Register {
+        match state
+            .repository
+            .accounts
+            .register(&credentials.username, &credentials.password)
+            .await
+        {
+            Ok(_account) => { /* continue to automatic login */ }
+            Err(RegistrationError::NameTaken) => return AuthResult::Error(StatusCode::CONFLICT),
+            Err(_internal) => return AuthResult::Error(StatusCode::INTERNAL_SERVER_ERROR),
+        }
+    }
+
+    match state
+        .repository
+        .accounts
+        .login(&credentials.username, &credentials.password)
+        .await
+    {
+        Ok(session) => {
+            let base_cookie = Cookie::new(SESSION_COOKIE_NAME, session.token);
+            let cookie = Cookie::build(base_cookie)
+                .path("/")
+                .http_only(true)
+                .secure(false)
+                .same_site(SameSite::Lax);
+            let jar = CookieJar::new().add(cookie);
+            AuthResult::LoggedIn(jar, Redirect::to("/chat"))
         }
 
-        SubmitAction::Login => {
-            let result = state
-                .repository
-                .accounts
-                .login(&credentials.username, &credentials.password)
-                .await;
-            match result {
-                Ok(session) => {
-                    let base_cookie = Cookie::new(SESSION_COOKIE_NAME, session.token);
-                    let cookie = Cookie::build(base_cookie)
-                        .path("/")
-                        .http_only(true)
-                        .secure(false)
-                        .same_site(SameSite::Lax);
-                    let jar = CookieJar::new().add(cookie);
-                    AuthResult::LoggedIn(jar, Redirect::to("/chat"))
-                }
-
-                Err(login_error) => match login_error {
-                    LoginError::InvalidCredentials => AuthResult::Error(StatusCode::UNAUTHORIZED),
-                    _ => AuthResult::Error(StatusCode::INTERNAL_SERVER_ERROR),
-                },
-            }
-        }
+        Err(LoginError::InvalidCredentials) => AuthResult::Error(StatusCode::UNAUTHORIZED),
+        Err(_) => AuthResult::Error(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
 
