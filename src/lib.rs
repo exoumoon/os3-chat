@@ -1,16 +1,16 @@
 #![allow(clippy::missing_errors_doc)]
 
 use crate::state::SharedState;
+use axum::Router;
 use axum::middleware::from_extractor_with_state;
+use axum::response::Redirect;
 use axum::routing::{any, get, post};
-use axum::{Router, response::Redirect};
 use clap::Parser;
 use repository::Repository;
 use sqlx::SqlitePool;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::sync::Arc;
 use tokio::net::TcpListener;
-use tokio::sync::{RwLock, broadcast};
+use tokio::sync::broadcast;
 use tracing::instrument;
 
 pub mod auth;
@@ -39,7 +39,6 @@ pub async fn run(settings: Settings) -> Result<(), color_eyre::eyre::Report> {
     let state = SharedState {
         repository: Repository::new(db_pool.clone()),
         db_pool,
-        messages: Arc::new(RwLock::new(vec![])),
         broadcast_tx,
     };
 
