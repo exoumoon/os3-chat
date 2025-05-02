@@ -8,7 +8,7 @@
 </head>
 <body class="bg-[#121212] text-gray-100 font-sans p-6 space-y-4">
     <div class="flex justify-between items-center p-4">
-        <p>Logged in as <b>{{ logged_in_as }}</b> in room {{ room_name }} (#{{ room_id }})</p>
+        <p>Logged in as <b>{{ logged_in_as }}</b> in room "{{ room_name }}" (#{{ room_id }})</p>
         <form action="/account/logout" method="post">
             <button
                 type="submit"

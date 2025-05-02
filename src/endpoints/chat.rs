@@ -45,7 +45,7 @@ pub async fn page(
     let template = ChatTemplate {
         logged_in_as: &account.username,
         title: env!("CARGO_CRATE_NAME"),
-        room_name: "FIXME_hardcoded",
+        room_name: &room.name,
         room_id,
         messages,
     };
