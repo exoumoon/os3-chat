@@ -47,6 +47,7 @@ pub async fn run(settings: Settings) -> Result<(), color_eyre::eyre::Report> {
     let protected_router = Router::new()
         .route("/chat/{room_id}", get(endpoints::chat::page))
         .route("/chat/{room_id}/websocket", any(endpoints::chat::websocket))
+        .route("/upload", post(endpoints::upload::upload_handler))
         .route("/account/logout", post(endpoints::account::logout))
         .route_layer(from_extractor_with_state::<auth::Session, _>(state.clone()));
 

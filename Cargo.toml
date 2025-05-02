@@ -26,7 +26,7 @@ match_bool = { level = "allow", priority = 1 }
 [dependencies]
 argon2 = "0.5.3"
 askama = "0.14.0"
-axum = { version = "0.8.4", features = ["macros", "ws"] }
+axum = { version = "0.8.4", features = ["macros", "multipart", "ws"] }
 axum-extra = { version = "0.10.1", features = ["cookie"] }
 axum-valid = "0.23.0"
 chrono = { version = "0.4.41", features = ["now", "serde"] }

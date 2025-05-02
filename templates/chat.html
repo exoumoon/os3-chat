@@ -9,6 +9,29 @@
 <body class="bg-[#121212] text-gray-100 font-sans p-6 space-y-4">
     <div class="flex justify-between items-center p-4">
         <p>Logged in as <b>{{ logged_in_as }}</b> in room "{{ room_name }}" (#{{ room_id }})</p>
+
+        <form
+            id="upload-form"
+            action="/upload"
+            method="POST"
+            enctype="multipart/form-data"
+            class="flex space-x-2 bg-[#1e1e1e] p-2 rounded"
+        >
+            <input
+                type="file"
+                name="file"
+                class="text-sm text-gray-100"
+                required
+            />
+            <input type="hidden" name="room_id" value="{{ room_id }}">
+            <button
+                type="submit"
+                class="text-sm text-purple-400 hover:text-purple-300 hover:underline"
+            >
+                Upload file
+            </button>
+        </form>
+
         <form action="/account/logout" method="post">
             <button
                 type="submit"
