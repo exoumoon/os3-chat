@@ -31,6 +31,14 @@ pub struct AccountRepository {
 }
 
 impl AccountRepository {
+    #[instrument(skip(self))]
+    pub async fn find_by_id(&self, account_id: i64) -> Result<Option<Account>, sqlx::Error> {
+        tracing::trace!("Searching for account in the repository");
+        sqlx::query_as!(Account, "SELECT * FROM accounts WHERE id = ?", account_id)
+            .fetch_optional(&self.connection)
+            .await
+    }
+
     #[instrument(skip(self, password))]
     pub async fn register(
         &self,

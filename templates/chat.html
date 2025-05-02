@@ -8,7 +8,7 @@
 </head>
 <body class="bg-[#121212] text-gray-100 font-sans p-6 space-y-4">
     <div class="flex justify-between items-center p-4">
-        <p>Logged in as <b>{{ logged_in_as }}</b></p>
+        <p>Logged in as <b>{{ logged_in_as }}</b> in room {{ room_name }} (#{{ room_id }})</p>
         <form action="/account/logout" method="post">
             <button
                 type="submit"
@@ -34,7 +34,7 @@
     </ul>
 
     <script>
-        const websocket = new WebSocket("ws://" + location.host + "/chat/websocket");
+        const websocket = new WebSocket("ws://" + location.host + "/chat/{{ room_id }}/websocket");
         const chat = document.getElementById("messages");
         const input = document.getElementById("message_text_input");
 

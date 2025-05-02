@@ -16,6 +16,7 @@ pub struct Session(pub AuthorizedAccount);
 #[derive(Debug)]
 #[must_use]
 pub struct AuthorizedAccount {
+    pub id: i64,
     pub username: String,
     pub registered_at: NaiveDateTime,
     pub session_id: i64,
@@ -49,6 +50,7 @@ where
                 .map_err(|_| RejectionCause::InvalidSession)?;
 
             let authorized_account = AuthorizedAccount {
+                id: account_record.id,
                 username: account_record.username,
                 registered_at: account_record.registered_at,
                 session_id: session.id,

@@ -1,7 +1,8 @@
 use crate::auth::{SESSION_COOKIE_NAME, Session};
 use crate::repository::account::{LoginError, RegistrationError};
 use crate::state::SharedState;
-use axum::response::{IntoResponse, Redirect};
+use askama::Template;
+use axum::response::{Html, IntoResponse, Redirect};
 use axum::{Form, debug_handler, extract::State, http::StatusCode};
 use axum_extra::extract::CookieJar;
 use axum_extra::extract::cookie::{Cookie, SameSite};
@@ -9,6 +10,19 @@ use axum_valid::Valid;
 use serde::Deserialize;
 use tracing::instrument;
 use validator::Validate;
+
+#[derive(Template)]
+#[template(path = "account.html")]
+pub struct AccountTemplate;
+
+#[instrument(skip_all)]
+#[debug_handler]
+pub async fn page() -> Result<impl IntoResponse, StatusCode> {
+    AccountTemplate
+        .render()
+        .map(Html)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
 
 #[derive(Deserialize, Validate, Debug)]
 #[must_use]
@@ -69,7 +83,7 @@ pub async fn submit(
                 .secure(false)
                 .same_site(SameSite::Lax);
             let jar = CookieJar::new().add(cookie);
-            AuthResult::LoggedIn(jar, Redirect::to("/chat"))
+            AuthResult::LoggedIn(jar, Redirect::to("/chat/1"))
         }
 
         Err(LoginError::InvalidCredentials) => AuthResult::Error(StatusCode::UNAUTHORIZED),

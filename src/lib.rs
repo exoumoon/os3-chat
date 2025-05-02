@@ -44,15 +44,15 @@ pub async fn run(settings: Settings) -> Result<(), color_eyre::eyre::Report> {
     };
 
     let protected_router = Router::new()
-        .route("/chat", get(endpoints::chat))
-        .route("/chat/websocket", any(endpoints::websocket))
+        .route("/chat/{room_id}", get(endpoints::chat::page))
+        .route("/chat/{room_id}/websocket", any(endpoints::chat::websocket))
         .route("/account/logout", post(endpoints::account::logout))
         .route_layer(from_extractor_with_state::<auth::Session, _>(state.clone()));
 
     let router = Router::new()
         .merge(protected_router)
-        .route("/", get(|| async { Redirect::to("/chat") }))
-        .route("/account", get(endpoints::account))
+        .route("/", get(|| async { Redirect::to("/chat/1") }))
+        .route("/account", get(endpoints::account::page))
         .route("/account/form/submit", post(endpoints::account::submit))
         .layer(layers::trace_layer())
         .with_state(state);
