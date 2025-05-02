@@ -73,7 +73,7 @@ pub async fn websocket(
                 match websocket_tx.send(Message::Text(utf8_bytes)).await {
                     Ok(()) => tracing::trace!("Websocket TX ok"),
                     Err(error) => {
-                        tracing::error!(?error, "Websocket TX failed");
+                        tracing::warn!(?error, "Websocket TX failed (likely disconnect)");
                         break;
                     }
                 }
