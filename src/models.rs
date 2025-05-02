@@ -15,6 +15,7 @@ pub struct Session {
     pub token: String,
     pub account_id: i64,
     pub created_at: NaiveDateTime,
+    pub expired: bool,
 }
 
 #[derive(Debug, Clone)]

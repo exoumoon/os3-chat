@@ -2,7 +2,6 @@
 
 use crate::state::SharedState;
 use axum::Router;
-use axum::http::StatusCode;
 use axum::middleware::from_extractor_with_state;
 use axum::response::Redirect;
 use axum::routing::{any, get, post};
@@ -49,6 +48,7 @@ pub async fn run(settings: Settings) -> Result<(), color_eyre::eyre::Report> {
     let protected_router = Router::new()
         .route("/chat", get(endpoints::chat))
         .route("/chat/websocket", any(endpoints::websocket))
+        .route("/account/logout", post(endpoints::account::logout))
         .route_layer(from_extractor_with_state::<auth::Session, _>(state.clone()));
 
     let router = Router::new()

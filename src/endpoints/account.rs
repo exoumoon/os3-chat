@@ -1,4 +1,4 @@
-use crate::auth::SESSION_COOKIE_NAME;
+use crate::auth::{SESSION_COOKIE_NAME, Session};
 use crate::repository::account::{LoginError, RegistrationError};
 use crate::state::SharedState;
 use axum::response::{IntoResponse, Redirect};
@@ -75,6 +75,21 @@ pub async fn submit(
         Err(LoginError::InvalidCredentials) => AuthResult::Error(StatusCode::UNAUTHORIZED),
         Err(_) => AuthResult::Error(StatusCode::INTERNAL_SERVER_ERROR),
     }
+}
+
+#[instrument(skip_all, fields(username = account.username))]
+#[debug_handler]
+pub async fn logout(
+    State(state): State<SharedState>,
+    Session(account): Session,
+) -> Result<Redirect, StatusCode> {
+    state
+        .repository
+        .accounts
+        .expire_session(account.session_id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(Redirect::to("/"))
 }
 
 impl IntoResponse for AuthResult {

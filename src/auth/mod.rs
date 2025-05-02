@@ -35,10 +35,14 @@ where
         let session_token = cookies.get(SESSION_COOKIE_NAME).map(Cookie::value_trimmed);
 
         if let Some(token) = session_token {
-            let session = query!("SELECT * FROM sessions WHERE token = ?", token)
+            let session_query = query!(
+                "SELECT * FROM sessions WHERE token = ? AND expired = 0",
+                token
+            );
+            let session = session_query
                 .fetch_one(&state.db_pool)
                 .await
-                .map_err(|_| RejectionCause::InvalidSession)?;
+                .map_err(|_| RejectionCause::ExpiredSession)?;
             let account_record = query!("SELECT * FROM accounts WHERE id = ?", session.account_id)
                 .fetch_one(&state.db_pool)
                 .await
