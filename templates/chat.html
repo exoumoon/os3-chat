@@ -1,16 +1,25 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" class="dark">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{ title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <p>Logged in as <b>{{ logged_in_as }}</b></p>
+<body class="bg-[#121212] text-gray-100 font-sans p-6 space-y-4">
+    <p class="text-sm">Logged in as <b class="font-semibold text-purple-400">{{ logged_in_as }}</b></p>
 
-    <input id="message_text_input" placeholder="..." />
-    <ul id="messages">
+    <div class="flex space-x-2">
+        <input
+            id="message_text_input"
+            placeholder="Type a message..."
+            class="flex-grow px-3 py-2 rounded bg-[#1e1e1e] text-gray-100 border border-gray-700 focus:outline-none focus:ring focus:ring-purple-600"
+        />
+    </div>
+
+    <ul id="messages" class="space-y-2">
         {% for message in messages %}
-            <li>{{ message | safe }}</li>
+            <li class="bg-[#1e1e1e] p-3 rounded border border-gray-700">{{ message | safe }}</li>
         {% endfor %}
     </ul>
 
@@ -22,6 +31,7 @@
         websocket.onmessage = (event) => {
             const new_message = document.createElement("li");
             new_message.textContent = event.data;
+            new_message.className = "bg-[#1e1e1e] p-3 rounded border border-gray-700";
             chat.prepend(new_message);
         };
 
