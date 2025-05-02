@@ -1,6 +1,3 @@
-use crate::auth::Session;
-use crate::repository;
-use crate::state::SharedState;
 use askama::Template;
 use axum::body::Body;
 use axum::debug_handler;
@@ -8,8 +5,31 @@ use axum::extract::ws::Utf8Bytes;
 use axum::extract::{Path, State, WebSocketUpgrade, ws};
 use axum::http::{Response, StatusCode};
 use axum::response::{Html, IntoResponse};
+use chrono::NaiveDateTime;
 use futures::{SinkExt, StreamExt};
+use serde::{Deserialize, Serialize};
 use tracing::instrument;
+
+use crate::auth::Session;
+use crate::state::SharedState;
+
+#[derive(Deserialize, Clone, Debug)]
+#[must_use]
+pub struct IncomingMessage {
+    pub room_id: i64,
+    pub text: Option<String>,
+}
+
+#[derive(Serialize, Clone, Debug)]
+#[must_use]
+pub struct EchoedMessage {
+    pub id: i64,
+    pub sender_username: String,
+    pub sender_id: i64,
+    pub room_id: i64,
+    pub text: Option<String>,
+    pub sent_at: NaiveDateTime,
+}
 
 #[derive(Template)]
 #[template(path = "chat.html")]
@@ -18,7 +38,7 @@ pub struct ChatTemplate<'a> {
     pub logged_in_as: &'a str,
     pub room_name: &'a str,
     pub room_id: i64,
-    pub messages: Vec<repository::message::Message>,
+    pub initial_messages_json: String,
 }
 
 #[instrument(skip_all, fields(account = ?account))]
@@ -36,18 +56,31 @@ pub async fn page(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::NOT_FOUND)?;
-    let mut messages = room
+
+    let mut echoed_messages = vec![];
+    for message in room
         .get_messages(&shared_state.db_pool)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    messages.retain(|msg| msg.room_id == room_id);
-    messages.reverse();
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .into_iter()
+        .filter(|msg| msg.room_id == room_id)
+    {
+        let echoed_message = message
+            .to_echoed_message(&shared_state.db_pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        echoed_messages.push(echoed_message);
+    }
+
+    let initial_messages_json =
+        serde_json::to_string(&echoed_messages).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
     let template = ChatTemplate {
         logged_in_as: &account.username,
         title: env!("CARGO_CRATE_NAME"),
         room_name: &room.name,
         room_id,
-        messages,
+        initial_messages_json,
     };
 
     template
@@ -85,7 +118,8 @@ pub async fn websocket(
                 }
 
                 tracing::trace!(data = ?message, "RECV on local broadcast");
-                let utf8_bytes = Utf8Bytes::from(message.to_string());
+                let json_repr = serde_json::to_string(&message).unwrap();
+                let utf8_bytes = Utf8Bytes::from(json_repr);
                 match websocket_tx.send(ws::Message::Text(utf8_bytes)).await {
                     Ok(()) => tracing::trace!("Websocket TX ok"),
                     Err(error) => {
@@ -96,16 +130,34 @@ pub async fn websocket(
             }
         });
 
-        while let Some(Ok(ws::Message::Text(message))) = websocket_rx.next().await {
-            tracing::trace!(data = ?message, "RECV on websocket");
+        while let Some(Ok(ws::Message::Text(incoming_json))) = websocket_rx.next().await {
+            tracing::trace!(data = ?incoming_json, "RECV on websocket");
 
-            let message = room
-                .send_new_message(&state.db_pool, account.id, Some(message.to_string()))
+            // NOTE: Здесь мы декодируем сырое сообщение через WebSocket от клиента. В нём
+            // известно только содержимое сообщения и ID комнаты, в которой должно оказаться
+            // это сообщение. ID отправителя мы уже знаем по сессии.
+            let incoming_message = serde_json::from_str::<IncomingMessage>(&incoming_json).unwrap();
+
+            assert_eq!(incoming_message.room_id, room.id);
+
+            // NOTE: Сохраняем полученные данные в БД, получая обратно полноценное
+            // отображение новой строки со временем отправки и другими данными.
+            let repo_message = room
+                .send_new_message(&state.db_pool, account.id, incoming_message.text)
+                .await
+                .unwrap();
+
+            // NOTE: Дополняем "строчку из БД", полученную ранее всеми данными, которые
+            // необходимы клиенту для отрисовки сообщения. Далее оно отправится в локальный
+            // поток сообщений, где все активные слушатели данной комнаты получат его и
+            // отправят в соответствующие WebSocketы.
+            let echoed_message = repo_message
+                .to_echoed_message(&state.db_pool)
                 .await
                 .unwrap();
 
             let _ = broadcast_tx
-                .send(message)
+                .send(echoed_message)
                 .inspect(|recv_count| tracing::trace!(?recv_count, "Sent data to local broadcast"))
                 .inspect_err(|error| tracing::error!(?error, "Local broadcast TX failed"));
         }

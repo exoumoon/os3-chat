@@ -1,6 +1,7 @@
 #![allow(clippy::missing_errors_doc)]
 
-use crate::state::SharedState;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
 use axum::Router;
 use axum::middleware::from_extractor_with_state;
 use axum::response::Redirect;
@@ -8,10 +9,11 @@ use axum::routing::{any, get, post};
 use clap::Parser;
 use repository::Repository;
 use sqlx::SqlitePool;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::net::TcpListener;
 use tokio::sync::broadcast;
 use tracing::instrument;
+
+use crate::state::SharedState;
 
 pub mod auth;
 pub mod endpoints;

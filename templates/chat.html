@@ -27,27 +27,60 @@
         />
     </div>
 
-    <ul id="messages" class="space-y-2">
-        {% for message in messages %}
-            <li class="bg-[#1e1e1e] p-3 rounded border border-gray-700">{{ message | safe }}</li>
-        {% endfor %}
-    </ul>
+    <ul id="messages" class="space-y-2"></ul>
+
+    <script id="initial-messages" type="application/json">
+        {{ initial_messages_json | safe }}
+    </script>
+
+    <script>
+        class ChatMessage {
+            constructor(data) {
+                this.id = data.id;
+                this.senderUsername = data.sender_username;
+                this.senderId = data.sender_id;
+                this.roomId = data.room_id;
+                this.text = data.text;
+                this.sentAt = data.sent_at;
+            }
+
+            render() {
+                const li = document.createElement("li");
+                li.className = "bg-[#1e1e1e] p-3 rounded border border-gray-700";
+
+                const time = new Date(this.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                li.innerHTML = `
+                    <div class="text-sm text-purple-400">${this.senderUsername} <span class="text-gray-500 text-xs">${time}</span></div>
+                    <div>${this.text}</div>
+                `;
+                return li;
+            }
+        }
+    </script>
 
     <script>
         const websocket = new WebSocket("ws://" + location.host + "/chat/{{ room_id }}/websocket");
         const chat = document.getElementById("messages");
         const input = document.getElementById("message_text_input");
 
+        const initial = JSON.parse(document.getElementById("initial-messages").textContent);
+        initial.forEach(msg => {
+            const message = new ChatMessage(msg);
+            chat.prepend(message.render());
+        });
+
         websocket.onmessage = (event) => {
-            const new_message = document.createElement("li");
-            new_message.textContent = event.data;
-            new_message.className = "bg-[#1e1e1e] p-3 rounded border border-gray-700";
-            chat.prepend(new_message);
+            const message = new ChatMessage(JSON.parse(event.data));
+            chat.prepend(message.render());
         };
 
         input.addEventListener("keydown", event => {
             if (event.key === "Enter" && input.value) {
-                websocket.send(input.value);
+                const payload = JSON.stringify({
+                    room_id: {{ room_id }},
+                    text: input.value
+                });
+                websocket.send(payload);
                 input.value = "";
             }
         });

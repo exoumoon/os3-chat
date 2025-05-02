@@ -1,6 +1,3 @@
-use crate::auth::{SESSION_COOKIE_NAME, Session};
-use crate::repository::account::{LoginError, RegistrationError};
-use crate::state::SharedState;
 use askama::Template;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -12,6 +9,10 @@ use axum_valid::Valid;
 use serde::Deserialize;
 use tracing::instrument;
 use validator::Validate;
+
+use crate::auth::{SESSION_COOKIE_NAME, Session};
+use crate::repository::account::{LoginError, RegistrationError};
+use crate::state::SharedState;
 
 #[derive(Template)]
 #[template(path = "account.html")]

@@ -1,8 +1,9 @@
-use super::account::Account;
-use super::message::Message;
 use chrono::NaiveDateTime;
 use sqlx::SqlitePool;
 use tracing::instrument;
+
+use super::account::Account;
+use super::message::Message;
 
 #[derive(sqlx::FromRow, Clone, Debug)]
 pub struct Room {

@@ -1,4 +1,3 @@
-use super::CODE_NON_UNIQUE;
 use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use chrono::NaiveDateTime;
@@ -6,6 +5,8 @@ use rand_core::OsRng;
 use sqlx::SqlitePool;
 use tracing::instrument;
 use uuid::Uuid;
+
+use super::CODE_NON_UNIQUE;
 
 #[derive(sqlx::FromRow, Clone, Debug, PartialEq, Eq)]
 pub struct Account {

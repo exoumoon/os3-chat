@@ -1,4 +1,3 @@
-use crate::state::SharedState;
 use axum::extract::{FromRef, FromRequestParts};
 use axum::http::StatusCode;
 use axum::http::request::Parts;
@@ -8,6 +7,8 @@ use axum_extra::extract::cookie::Cookie;
 use chrono::NaiveDateTime;
 use sqlx::query;
 use tracing::{Level, instrument};
+
+use crate::state::SharedState;
 
 pub const SESSION_COOKIE_NAME: &str = "session-token";
 
