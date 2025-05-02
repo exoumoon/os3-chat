@@ -7,7 +7,7 @@ use chrono::NaiveDateTime;
 use sqlx::query;
 use tracing::{Level, instrument};
 
-pub const SESSION_COOKIE_NAME: &str = "sessiont-token";
+pub const SESSION_COOKIE_NAME: &str = "session-token";
 
 #[derive(Debug)]
 #[must_use]
