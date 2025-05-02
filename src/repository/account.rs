@@ -1,14 +1,28 @@
 use super::CODE_NON_UNIQUE;
 use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
+use chrono::NaiveDateTime;
 use rand_core::OsRng;
 use sqlx::SqlitePool;
 use tracing::instrument;
 use uuid::Uuid;
 
-// TODO: Relocate here.
-pub use crate::models::Account;
-pub use crate::models::Session;
+#[derive(sqlx::FromRow, Clone, Debug, PartialEq, Eq)]
+pub struct Account {
+    pub id: i64,
+    pub username: String,
+    pub password_hash: String,
+    pub registered_at: NaiveDateTime,
+}
+
+#[derive(sqlx::FromRow, Clone, Debug, PartialEq, Eq)]
+pub struct Session {
+    pub id: i64,
+    pub token: String,
+    pub account_id: i64,
+    pub created_at: NaiveDateTime,
+    pub expired: bool,
+}
 
 #[derive(Debug, Clone)]
 #[must_use]

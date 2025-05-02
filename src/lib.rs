@@ -16,7 +16,6 @@ use tracing::instrument;
 pub mod auth;
 pub mod endpoints;
 pub mod layers;
-pub mod models;
 pub mod repository;
 pub mod state;
 

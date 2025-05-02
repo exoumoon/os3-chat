@@ -1,4 +1,4 @@
-use crate::{models::Message, repository::Repository};
+use crate::repository::{Repository, message::Message};
 use sqlx::SqlitePool;
 use std::sync::Arc;
 use tokio::sync::{RwLock, broadcast};

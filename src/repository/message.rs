@@ -1,22 +1,5 @@
-use chrono::{DateTime, Local, NaiveDateTime};
+use chrono::{DateTime, Local};
 use std::fmt;
-
-#[derive(sqlx::FromRow, Clone, Debug, PartialEq, Eq)]
-pub struct Account {
-    pub id: i64,
-    pub username: String,
-    pub password_hash: String,
-    pub registered_at: NaiveDateTime,
-}
-
-#[derive(sqlx::FromRow, Clone, Debug, PartialEq, Eq)]
-pub struct Session {
-    pub id: i64,
-    pub token: String,
-    pub account_id: i64,
-    pub created_at: NaiveDateTime,
-    pub expired: bool,
-}
 
 #[derive(Debug, Clone)]
 #[must_use]

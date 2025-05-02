@@ -1,5 +1,6 @@
 use crate::auth::Session;
-use crate::{models, state::SharedState};
+use crate::repository;
+use crate::state::SharedState;
 use askama::Template;
 use axum::extract::ws::{Message, Utf8Bytes};
 use axum::extract::{State, WebSocketUpgrade};
@@ -21,7 +22,7 @@ pub struct AccountTemplate;
 pub struct ChatTemplate<'a> {
     pub logged_in_as: &'a str,
     pub title: &'a str,
-    pub messages: Vec<crate::models::Message>,
+    pub messages: Vec<repository::message::Message>,
 }
 
 #[instrument(skip_all)]
@@ -84,7 +85,7 @@ pub async fn websocket(
             tracing::trace!(data = ?message, "RECV on websocket");
 
             let current_time = Local::now();
-            let message = models::Message {
+            let message = repository::message::Message {
                 text: message.to_string(),
                 sender_username: account.username.clone(),
                 timestamp: current_time,
