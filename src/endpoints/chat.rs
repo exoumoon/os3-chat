@@ -29,6 +29,8 @@ pub struct EchoedMessage {
     pub room_id: i64,
     pub text: Option<String>,
     pub sent_at: NaiveDateTime,
+    pub file_upload_original_name: Option<String>,
+    pub file_upload_url: Option<String>,
 }
 
 #[derive(Template)]
@@ -66,7 +68,7 @@ pub async fn page(
         .filter(|msg| msg.room_id == room_id)
     {
         let echoed_message = message
-            .to_echoed_message(&state.db_pool)
+            .to_echoed_message(&state)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         echoed_messages.push(echoed_message);
@@ -151,10 +153,7 @@ pub async fn websocket(
             // необходимы клиенту для отрисовки сообщения. Далее оно отправится в локальный
             // поток сообщений, где все активные слушатели данной комнаты получат его и
             // отправят в соответствующие WebSocketы.
-            let echoed_message = repo_message
-                .to_echoed_message(&state.db_pool)
-                .await
-                .unwrap();
+            let echoed_message = repo_message.to_echoed_message(&state).await.unwrap();
 
             let _ = broadcast_tx
                 .send(echoed_message)

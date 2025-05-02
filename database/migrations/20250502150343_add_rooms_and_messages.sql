@@ -10,7 +10,9 @@ CREATE TABLE messages (
     room_id INTEGER NOT NULL,
     content TEXT,
     sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    file_upload_id INTEGER,
 
     FOREIGN KEY(sender_account_id) REFERENCES accounts(id),
-    FOREIGN KEY(room_id) REFERENCES rooms(id)
+    FOREIGN KEY(room_id) REFERENCES rooms(id),
+    FOREIGN KEY(file_upload_id) REFERENCES file_uploads(id)
 );
