@@ -1,7 +1,7 @@
 use crate::state::SharedState;
 use axum::extract::{FromRef, FromRequestParts};
 use axum::http::{StatusCode, request::Parts};
-use axum::response::IntoResponse;
+use axum::response::{IntoResponse, Redirect};
 use axum_extra::extract::{CookieJar, cookie::Cookie};
 use chrono::NaiveDateTime;
 use sqlx::query;
@@ -69,11 +69,12 @@ pub enum RejectionCause {
 
 impl IntoResponse for RejectionCause {
     fn into_response(self) -> axum::response::Response {
+        let redirect = Redirect::to("/account");
         match self {
-            Self::NoSessionCookie => (StatusCode::BAD_REQUEST, "No session cookie").into_response(),
-            Self::InvalidSession => (StatusCode::UNAUTHORIZED, "Invalid session").into_response(),
-            Self::ExpiredSession => (StatusCode::UNAUTHORIZED, "Expired session").into_response(),
-            Self::InternalServerError => (StatusCode::INTERNAL_SERVER_ERROR, "").into_response(),
+            Self::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            Self::InvalidSession | Self::NoSessionCookie | Self::ExpiredSession => {
+                redirect.into_response()
+            }
         }
     }
 }

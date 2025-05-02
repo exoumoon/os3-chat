@@ -2,7 +2,9 @@
 
 use crate::state::SharedState;
 use axum::Router;
+use axum::http::StatusCode;
 use axum::middleware::from_extractor_with_state;
+use axum::response::Redirect;
 use axum::routing::{any, get, post};
 use clap::Parser;
 use repository::Repository;
@@ -51,7 +53,8 @@ pub async fn run(settings: Settings) -> Result<(), color_eyre::eyre::Report> {
 
     let router = Router::new()
         .merge(protected_router)
-        .route("/", get(endpoints::root))
+        .route("/", get(|| async { Redirect::to("/chat") }))
+        .route("/account", get(endpoints::account))
         .route("/account/form/submit", post(endpoints::account::submit))
         .layer(layers::trace_layer())
         .with_state(state);

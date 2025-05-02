@@ -26,7 +26,7 @@ pub struct ChatTemplate<'a> {
 
 #[instrument(skip_all)]
 #[debug_handler]
-pub async fn root() -> Result<impl IntoResponse, StatusCode> {
+pub async fn account() -> Result<impl IntoResponse, StatusCode> {
     AccountTemplate
         .render()
         .map(Html)
