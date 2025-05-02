@@ -13,7 +13,9 @@ use validator::Validate;
 #[derive(Deserialize, Validate, Debug)]
 #[must_use]
 pub struct CredentialsForm {
+    #[validate(length(min = 1, max = 64))]
     username: String,
+    #[validate(length(min = 8, max = 64))]
     password: String,
     action: SubmitAction,
 }
