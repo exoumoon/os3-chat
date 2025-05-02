@@ -44,12 +44,12 @@ pub struct ChatTemplate<'a> {
 #[instrument(skip_all, fields(account = ?account))]
 #[debug_handler]
 pub async fn page(
-    State(shared_state): State<SharedState>,
+    State(state): State<SharedState>,
     Session(account): Session,
     Path(room_id): Path<i64>,
 ) -> Result<impl IntoResponse, StatusCode> {
     tracing::trace!("Serving chat page");
-    let room = shared_state
+    let room = state
         .repository
         .rooms
         .find_by_id(room_id)
@@ -59,14 +59,14 @@ pub async fn page(
 
     let mut echoed_messages = vec![];
     for message in room
-        .get_messages(&shared_state.db_pool)
+        .get_messages(&state.db_pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .into_iter()
         .filter(|msg| msg.room_id == room_id)
     {
         let echoed_message = message
-            .to_echoed_message(&shared_state.db_pool)
+            .to_echoed_message(&state.db_pool)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         echoed_messages.push(echoed_message);

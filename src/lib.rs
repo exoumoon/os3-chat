@@ -3,6 +3,7 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use axum::Router;
+use axum::extract::DefaultBodyLimit;
 use axum::middleware::from_extractor_with_state;
 use axum::response::Redirect;
 use axum::routing::{any, get, post};
@@ -14,6 +15,8 @@ use tokio::sync::broadcast;
 use tracing::instrument;
 
 use crate::state::SharedState;
+
+const GIGABYTE: usize = 1024 * 1024 * 1024;
 
 pub mod auth;
 pub mod endpoints;
@@ -44,10 +47,14 @@ pub async fn run(settings: Settings) -> Result<(), color_eyre::eyre::Report> {
         broadcast_tx,
     };
 
+    let upload_router = Router::new()
+        .route("/upload", post(endpoints::upload::upload_handler))
+        .layer(DefaultBodyLimit::max(GIGABYTE));
+
     let protected_router = Router::new()
+        .merge(upload_router)
         .route("/chat/{room_id}", get(endpoints::chat::page))
         .route("/chat/{room_id}/websocket", any(endpoints::chat::websocket))
-        .route("/upload", post(endpoints::upload::upload_handler))
         .route("/account/logout", post(endpoints::account::logout))
         .route_layer(from_extractor_with_state::<auth::Session, _>(state.clone()));
 
