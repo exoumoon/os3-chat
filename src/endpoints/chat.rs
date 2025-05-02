@@ -14,8 +14,8 @@ use tracing::instrument;
 #[derive(Template)]
 #[template(path = "chat.html")]
 pub struct ChatTemplate<'a> {
-    pub logged_in_as: &'a str,
     pub title: &'a str,
+    pub logged_in_as: &'a str,
     pub room_name: &'a str,
     pub room_id: i64,
     pub messages: Vec<repository::message::Message>,
