@@ -1,8 +1,10 @@
 use axum::extract::State;
 use axum::http::StatusCode;
-use axum::{Json, debug_handler};
-use serde::Serialize;
+use axum::{Form, Json, debug_handler};
+use axum_valid::Valid;
+use serde::{Deserialize, Serialize};
 use tracing::instrument;
+use validator::Validate;
 
 use crate::auth::Session;
 use crate::state::SharedState;
@@ -18,7 +20,7 @@ pub type RoomResponse = Json<Vec<RoomResponseEntry>>;
 
 #[instrument(skip_all, fields(requester.username = requester.username), err(Debug))]
 #[debug_handler]
-pub async fn handle_room_request(
+pub async fn list(
     State(state): State<SharedState>,
     Session(requester): Session,
 ) -> Result<RoomResponse, StatusCode> {
@@ -37,4 +39,34 @@ pub async fn handle_room_request(
         .collect();
 
     Ok(Json(rooms))
+}
+
+#[derive(Deserialize, Validate, Debug)]
+#[must_use]
+pub struct CreateRoomForm {
+    #[validate(length(min = 1, max = 64))]
+    room_name: String,
+}
+
+#[instrument(skip_all, fields(requester.username = requester.username, form = ?form))]
+#[debug_handler]
+pub async fn create(
+    State(state): State<SharedState>,
+    Session(requester): Session,
+    Valid(form): Valid<Form<CreateRoomForm>>,
+) -> Result<StatusCode, StatusCode> {
+    let room = state
+        .repository
+        .rooms
+        .create(&form.room_name)
+        .await
+        .inspect(|room| tracing::debug!(?room, "Created new room"))
+        .inspect_err(|error| tracing::error!(?error, "Failed to create room"))
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    room.add_member(&state.db_pool, &requester.username)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(StatusCode::CREATED)
 }

@@ -20,6 +20,18 @@ pub struct Room {
 }
 
 impl Room {
+    #[instrument(skip_all, fields(username = username), err(Debug))]
+    pub async fn add_member(&self, connection: &SqlitePool, username: &str) -> sqlx::Result<()> {
+        sqlx::query!(
+            "INSERT INTO room_membership (member, room_id) VALUES (?, ?)",
+            username,
+            self.id
+        )
+        .execute(connection)
+        .await?;
+        Ok(())
+    }
+
     #[instrument(skip_all, fields(room.id = self.id, room.name = self.name), err(Debug))]
     pub async fn get_members(&self, connection: &SqlitePool) -> Result<Vec<Account>, sqlx::Error> {
         let query = sqlx::query_as!(
@@ -128,6 +140,17 @@ pub struct RoomRepository {
 }
 
 impl RoomRepository {
+    #[instrument(skip(self), err(Debug))]
+    pub async fn create(&self, name: &str) -> Result<Room, sqlx::Error> {
+        sqlx::query_as!(
+            Room,
+            "INSERT INTO rooms (name) VALUES (?) RETURNING *",
+            name
+        )
+        .fetch_one(&self.connection)
+        .await
+    }
+
     #[instrument(skip(self), err(Debug))]
     pub async fn find_by_id(&self, room_id: i64) -> Result<Option<Room>, sqlx::Error> {
         sqlx::query_as!(Room, "SELECT * FROM rooms WHERE id = ?", room_id)

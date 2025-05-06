@@ -52,12 +52,16 @@ pub async fn run(settings: Settings) -> Result<(), color_eyre::eyre::Report> {
         .route("/upload/{uuid}", get(endpoints::upload::download_handler))
         .layer(DefaultBodyLimit::max(GIGABYTE));
 
+    let room_router = Router::new()
+        .route("/list", get(endpoints::rooms::list))
+        .route("/create", post(endpoints::rooms::create));
+
     let protected_router = Router::new()
         .merge(file_router)
-        .route("/api/rooms", get(endpoints::rooms::handle_room_request))
+        .nest("/api/room/", room_router)
+        .route("/account/logout", post(endpoints::account::logout))
         .route("/chat/{room_id}", get(endpoints::chat::page))
         .route("/chat/{room_id}/websocket", any(endpoints::chat::websocket))
-        .route("/account/logout", post(endpoints::account::logout))
         .route_layer(from_extractor_with_state::<auth::Session, _>(state.clone()));
 
     let router = Router::new()

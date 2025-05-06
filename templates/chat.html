@@ -10,8 +10,24 @@
     <div class="flex h-screen overflow-hidden" height="100%">
         <!-- NOTE: Sidebar for rooms -->
         <aside class="w-60 bg-[#1e1e1e] p-4 border-r border-gray-700 space-y-2 overflow-y-auto">
-          <h2 class="text-lg text-purple-300">Your chat rooms</h2>
-          <ul id="room-list" class="space-y-2"></ul>
+            <h2 class="text-lg text-purple-300">Your chat rooms</h2>
+            <ul id="room-list" class="space-y-2"></ul>
+
+            <form id="create-room-form" class="space-y-2 pt-4 border-t border-gray-700">
+                <input
+                    name="room_name"
+                    type="text"
+                    placeholder="New room name"
+                    class="w-full px-2 py-1 rounded bg-[#2a2a2a] text-gray-100 border border-gray-600"
+                    required
+                />
+                <button
+                    type="submit"
+                    class="w-full py-1 bg-purple-700 hover:bg-purple-800 rounded text-white font-semibold"
+                >
+                    Create room
+                </button>
+            </form>
         </aside>
 
         <!-- NOTE: Main chat area -->
@@ -143,7 +159,7 @@
     <script>
         async function loadRoomList() {
             try {
-                const res = await fetch("/api/rooms");
+                const res = await fetch("/api/room/list");
                 const rooms = await res.json();
 
                 const list = document.getElementById("room-list");
@@ -169,6 +185,30 @@
 
         window.addEventListener("DOMContentLoaded", () => {
             loadRoomList();
+        });
+
+        document.getElementById("create-room-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const formData = new FormData(form);
+            const body = new URLSearchParams();
+
+            for (const [key, value] of formData.entries()) {
+                body.append(key, value);
+            }
+
+            const res = await fetch("/api/room/create", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: body.toString(),
+            });
+
+            if (res.ok) {
+                form.reset();
+                loadRoomList();
+            } else {
+                alert("Failed to create room");
+            }
         });
     </script>
 </body>
