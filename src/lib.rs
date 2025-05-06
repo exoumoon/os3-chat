@@ -47,12 +47,13 @@ pub async fn run(settings: Settings) -> Result<(), color_eyre::eyre::Report> {
         broadcast_tx,
     };
 
-    let upload_router = Router::new()
+    let file_router = Router::new()
         .route("/upload", post(endpoints::upload::upload_handler))
+        .route("/upload/{uuid}", get(endpoints::upload::download_handler))
         .layer(DefaultBodyLimit::max(GIGABYTE));
 
     let protected_router = Router::new()
-        .merge(upload_router)
+        .merge(file_router)
         .route("/chat/{room_id}", get(endpoints::chat::page))
         .route("/chat/{room_id}/websocket", any(endpoints::chat::websocket))
         .route("/account/logout", post(endpoints::account::logout))

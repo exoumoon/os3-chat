@@ -48,6 +48,7 @@ tokio = { version = "1.44.2", default-features = false, features = [
     "macros",
     "signal",
 ] }
+tokio-util = { version = "0.7.15", features = ["io"] }
 tower = { version = "0.5.2", features = ["full"] }
 tower-http = { version = "0.6.2", features = ["add-extension", "trace"] }
 tracing = "0.1.41"

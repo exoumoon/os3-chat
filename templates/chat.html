@@ -92,7 +92,7 @@
                     fileLink.href = `/upload/${this.uploadUrl}`;
                     fileLink.download = this.uploadFilename;
                     fileLink.classList.add('text-blue-400', 'hover:text-blue-300', 'underline', 'mt-2', 'block');
-                    fileLink.textContent = `Download ${this.uploadFilename}`;
+                    fileLink.textContent = `file: ${this.uploadFilename}`;
                     messageContainer.appendChild(fileLink);
                 }
 

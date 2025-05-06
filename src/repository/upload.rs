@@ -10,6 +10,17 @@ pub struct Upload {
     pub filename: PathBuf,
 }
 
+impl Upload {
+    pub fn store_path(&self) -> Result<PathBuf, std::io::Error> {
+        let path_str = format!(
+            "./database/file_uploads/{}_{}",
+            self.uuid,
+            self.filename.to_string_lossy()
+        );
+        PathBuf::from(path_str).canonicalize()
+    }
+}
+
 #[derive(Debug, Clone)]
 #[must_use]
 pub struct UploadRepository {
