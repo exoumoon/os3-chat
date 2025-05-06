@@ -53,8 +53,9 @@ pub async fn run(settings: Settings) -> Result<(), color_eyre::eyre::Report> {
         .layer(DefaultBodyLimit::max(GIGABYTE));
 
     let room_router = Router::new()
-        .route("/list", get(endpoints::rooms::list))
-        .route("/create", post(endpoints::rooms::create));
+        .route("/create", post(endpoints::rooms::create))
+        .route("/invite", post(endpoints::rooms::invite))
+        .route("/list", get(endpoints::rooms::list));
 
     let protected_router = Router::new()
         .merge(file_router)

@@ -133,12 +133,10 @@ impl AccountRepository {
 
     #[instrument(skip(self), err(Debug))]
     pub async fn expire_session(&self, session_token: Uuid) -> Result<(), sqlx::Error> {
-        sqlx::query!(
-            "UPDATE sessions SET expired = 1 WHERE token = ?",
-            session_token
-        )
-        .execute(&self.connection)
-        .await?;
+        let token_str = session_token.to_string();
+        sqlx::query!("UPDATE sessions SET expired = 1 WHERE token = ?", token_str)
+            .execute(&self.connection)
+            .await?;
         tracing::debug!("Expired session");
         Ok(())
     }

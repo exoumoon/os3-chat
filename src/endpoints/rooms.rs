@@ -70,3 +70,33 @@ pub async fn create(
 
     Ok(StatusCode::CREATED)
 }
+
+#[derive(Deserialize, Validate, Debug)]
+#[must_use]
+pub struct InviteUserForm {
+    #[validate(length(min = 1, max = 64))]
+    username: String,
+    room_id: i64,
+}
+
+#[instrument(skip_all, fields(requester.username = requester.username, form = ?form))]
+#[debug_handler]
+pub async fn invite(
+    State(state): State<SharedState>,
+    Session(requester): Session,
+    Valid(form): Valid<Form<InviteUserForm>>,
+) -> Result<StatusCode, StatusCode> {
+    let room = state
+        .repository
+        .rooms
+        .find_by_id(form.room_id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    room.add_member(&state.db_pool, &form.username)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(StatusCode::CREATED)
+}

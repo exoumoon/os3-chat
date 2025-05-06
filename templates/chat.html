@@ -57,6 +57,13 @@
                     </button>
                 </form>
 
+                <button
+                    onclick="inviteUser({{ room_id }})"
+                    class="text-sm text-green-400 hover:text-green-300 hover:underline"
+                >
+                    Invite user
+                </button>
+
                 <form action="/account/logout" method="post">
                     <button
                         type="submit"
@@ -224,6 +231,27 @@
                 alert("Failed to create room");
             }
         });
+
+        async function inviteUser(roomId) {
+            const username = prompt("Enter the username to invite to this room:");
+            if (!username) return;
+
+            const body = new URLSearchParams();
+            body.append("room_id", {{ room_id }});
+            body.append("username", username);
+
+            const res = await fetch("/api/room/invite", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: body.toString(),
+            });
+
+            if (res.ok) {
+                alert("User invited!");
+            } else {
+                alert("Failed to invite user.");
+            }
+        }
     </script>
 </body>
 </html>
