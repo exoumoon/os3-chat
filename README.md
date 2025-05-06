@@ -4,3 +4,11 @@
 sqlx database setup --source database/migrations # Sets up SQLite.
 cargo run --release                              # Runs the server.
 ```
+
+## WebUI
+
+<img src="./assets/ui.png">
+
+## SQLite ERD
+
+<img src="./assets/erd.svg">
