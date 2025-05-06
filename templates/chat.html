@@ -1,56 +1,67 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" class="dark h-full">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{ title }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-[#121212] text-gray-100 font-sans p-6 space-y-4">
-    <div class="flex justify-between items-center p-4">
-        <p>Logged in as <b>{{ logged_in_as }}</b> in room "{{ room_name }}" (#{{ room_id }})</p>
+<body class="bg-[#121212] text-gray-100 font-nunito h-full">
+    <div class="flex h-screen overflow-hidden" height="100%">
+        <!-- NOTE: Sidebar for rooms -->
+        <aside class="w-60 bg-[#1e1e1e] p-4 border-r border-gray-700 space-y-2 overflow-y-auto">
+          <h2 class="text-lg text-purple-300">Your chat rooms</h2>
+          <ul id="room-list" class="space-y-2"></ul>
+        </aside>
 
-        <form
-            id="upload-form"
-            action="/upload"
-            method="POST"
-            enctype="multipart/form-data"
-            class="flex space-x-2 bg-[#1e1e1e] p-2 rounded"
-        >
-            <input
-                type="file"
-                name="file"
-                class="text-sm text-gray-100"
-                required
-            />
-            <input type="hidden" name="room_id" value="{{ room_id }}">
-            <button
-                type="submit"
-                class="text-sm text-purple-400 hover:text-purple-300 hover:underline"
-            >
-                Upload file
-            </button>
-        </form>
+        <!-- NOTE: Main chat area -->
+        <main class="flex-grow px-4 py-4 overflow-y-auto">
+            <div class="flex justify-between items-center pb-4">
+                <p>Logged in as <b>{{ logged_in_as }}</b></p>
 
-        <form action="/account/logout" method="post">
-            <button
-                type="submit"
-                class="text-sm text-purple-400 hover:text-purple-300 hover:underline"
-            >
-                Logout
-            </button>
-        </form>
+                <form
+                    id="upload-form"
+                    action="/upload"
+                    method="POST"
+                    enctype="multipart/form-data"
+                    class="flex space-x-2 bg-[#1e1e1e] p-2 rounded"
+                >
+                    <input
+                        type="file"
+                        name="file"
+                        class="text-sm text-gray-100"
+                        required
+                    />
+                    <input type="hidden" name="room_id" value="{{ room_id }}">
+                    <button
+                        type="submit"
+                        class="text-sm text-purple-400 hover:text-purple-300 hover:underline"
+                    >
+                        Upload file
+                    </button>
+                </form>
+
+                <form action="/account/logout" method="post">
+                    <button
+                        type="submit"
+                        class="text-sm text-purple-400 hover:text-purple-300 hover:underline"
+                    >
+                        Logout
+                    </button>
+                </form>
+            </div>
+
+            <div class="flex">
+                <input
+                    id="message_text_input"
+                    placeholder="Type a message..."
+                    class="flex-grow px-3 py-2 rounded bg-[#1e1e1e] text-gray-100 border border-gray-700 focus:outline-none focus:ring focus:ring-purple-600"
+                />
+            </div>
+
+            <ul id="messages" class="pt-2 space-y-2"></ul>
+        </main>
     </div>
-
-    <div class="flex space-x-2">
-        <input
-            id="message_text_input"
-            placeholder="Type a message..."
-            class="flex-grow px-3 py-2 rounded bg-[#1e1e1e] text-gray-100 border border-gray-700 focus:outline-none focus:ring focus:ring-purple-600"
-        />
-    </div>
-
-    <ul id="messages" class="space-y-2"></ul>
 
     <script id="initial-messages" type="application/json">
         {{ initial_messages_json | safe }}
@@ -71,7 +82,7 @@
             render() {
                 const messageContainer = document.createElement('div');
                 messageContainer.classList.add(
-                    'bg-[#1e1e1e]', 'p-2', 'rounded-lg', 'mb-4', 'border', 'border-gray-700', 'shadow-md'
+                    'bg-[#1e1e1e]', 'p-2', 'rounded-lg', 'border', 'border-gray-700', 'shadow-md'
                 );
 
                 const senderInfo = document.createElement('div');
@@ -126,6 +137,38 @@
                 websocket.send(payload);
                 input.value = "";
             }
+        });
+    </script>
+
+    <script>
+        async function loadRoomList() {
+            try {
+                const res = await fetch("/api/rooms");
+                const rooms = await res.json();
+
+                const list = document.getElementById("room-list");
+                list.innerHTML = "";
+
+                for (const room of rooms) {
+                    const li = document.createElement("li");
+                    const link = document.createElement("a");
+                    link.href = `/chat/${room.room_id}`;
+                    link.textContent = room.room_name;
+                    link.classList.add("block", "text-purple-400", "hover:underline");
+                    if (room.room_id === {{ room_id }}) {
+                        link.classList.add("font-bold");
+                        link.textContent = `> ${room.room_name}`;
+                    }
+                    li.appendChild(link);
+                    list.appendChild(li);
+                }
+            } catch (err) {
+                console.error("Failed to load rooms:", err);
+            }
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+            loadRoomList();
         });
     </script>
 </body>
