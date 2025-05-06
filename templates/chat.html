@@ -10,7 +10,7 @@
     <div class="flex h-screen overflow-hidden" height="100%">
         <!-- NOTE: Sidebar for rooms -->
         <aside class="w-60 bg-[#1e1e1e] p-4 border-r border-gray-700 space-y-2 overflow-y-auto">
-            <h2 class="text-lg text-purple-300">Your chat rooms</h2>
+            <h3 class="text-lg">Your chat rooms:</h3>
             <ul id="room-list" class="space-y-2"></ul>
 
             <form id="create-room-form" class="space-y-2 pt-4 border-t border-gray-700">
@@ -96,33 +96,47 @@
             }
 
             render() {
+                const isMe = this.sender === "{{ logged_in_as }}";
                 const messageContainer = document.createElement('div');
+
                 messageContainer.classList.add(
-                    'bg-[#1e1e1e]', 'p-2', 'rounded-lg', 'border', 'border-gray-700', 'shadow-md'
+                    'flex', isMe ? 'justify-end' : 'justify-start'
+                );
+
+                const bubble = document.createElement('div');
+                bubble.classList.add(
+                    'max-w-md',
+                    'p-2',
+                    'rounded-lg',
+                    'shadow-md',
+                    'mb-2',
+                    'whitespace-pre-wrap',
+                    'bg-[#1e1e1e]',
+                    isMe ? 'text-white'      : 'text-gray-100',
+                    isMe ? 'rounded-br-none' : 'rounded-bl-none'
                 );
 
                 const senderInfo = document.createElement('div');
-                senderInfo.classList.add('flex', 'items-center', 'text-sm', 'text-purple-400', 'mb-2');
-                senderInfo.innerHTML
-                    = `<b>${this.sender}</b>&nbsp;-&nbsp;<span class="text-xs">${this.sentAt.toLocaleString()}</span>`;
-                messageContainer.appendChild(senderInfo);
+                senderInfo.classList.add('text-xs', 'text-gray-400', 'mb-1');
+                senderInfo.textContent = `${this.sender} - ${this.sentAt.toLocaleString()}`;
+                bubble.appendChild(senderInfo);
 
                 if (this.text) {
                     const textMessage = document.createElement('p');
-                    textMessage.classList.add('text-gray-100', 'whitespace-pre-wrap');
                     textMessage.textContent = this.text;
-                    messageContainer.appendChild(textMessage);
+                    bubble.appendChild(textMessage);
                 }
 
                 if (this.uploadUrl && this.uploadFilename) {
                     const fileLink = document.createElement('a');
                     fileLink.href = `/upload/${this.uploadUrl}`;
                     fileLink.download = this.uploadFilename;
-                    fileLink.classList.add('text-blue-400', 'hover:text-blue-300', 'underline', 'mt-2', 'block');
+                    fileLink.classList.add('text-blue-400', 'hover:text-blue-300', 'underline', 'block', 'mt-1');
                     fileLink.textContent = `file: ${this.uploadFilename}`;
-                    messageContainer.appendChild(fileLink);
+                    bubble.appendChild(fileLink);
                 }
 
+                messageContainer.appendChild(bubble);
                 return messageContainer;
             }
         }

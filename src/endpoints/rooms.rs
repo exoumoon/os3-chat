@@ -29,7 +29,7 @@ pub async fn list(
         .rooms
         .find_by_member(&requester.username)
         .await
-        .inspect(|rooms| tracing::debug!(?rooms, "Returning list of rooms via API"))
+        .inspect(|rooms| tracing::debug!(count = rooms.len(), "Returning list of rooms via API"))
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .into_iter()
         .map(|db_room| RoomResponseEntry {
