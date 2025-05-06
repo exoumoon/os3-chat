@@ -134,6 +134,22 @@ impl RoomRepository {
             .fetch_optional(&self.connection)
             .await
     }
+
+    #[instrument(skip(self), err(Debug))]
+    pub async fn find_by_member(&self, member: &str) -> Result<Vec<Room>, sqlx::Error> {
+        sqlx::query_as!(
+            Room,
+            r#"
+                SELECT id, name, created_at
+                FROM rooms r
+                LEFT JOIN room_membership m ON r.id = m.room_id
+                WHERE m.member = ?
+            "#,
+            member
+        )
+        .fetch_all(&self.connection)
+        .await
+    }
 }
 
 #[derive(thiserror::Error, Debug)]

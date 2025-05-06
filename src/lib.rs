@@ -54,6 +54,7 @@ pub async fn run(settings: Settings) -> Result<(), color_eyre::eyre::Report> {
 
     let protected_router = Router::new()
         .merge(file_router)
+        .route("/api/rooms", get(endpoints::rooms::handle_room_request))
         .route("/chat/{room_id}", get(endpoints::chat::page))
         .route("/chat/{room_id}/websocket", any(endpoints::chat::websocket))
         .route("/account/logout", post(endpoints::account::logout))
