@@ -10,7 +10,6 @@ use super::CODE_NON_UNIQUE;
 
 #[derive(sqlx::FromRow, Clone, Debug, PartialEq, Eq)]
 pub struct Account {
-    pub id: i64,
     pub username: String,
     pub password_hash: String,
     pub registered_at: NaiveDateTime,
@@ -18,9 +17,8 @@ pub struct Account {
 
 #[derive(sqlx::FromRow, Clone, Debug, PartialEq, Eq)]
 pub struct Session {
-    pub id: i64,
     pub token: String,
-    pub account_id: i64,
+    pub account: String,
     pub created_at: NaiveDateTime,
     pub expired: bool,
 }
@@ -33,11 +31,14 @@ pub struct AccountRepository {
 
 impl AccountRepository {
     #[instrument(skip(self))]
-    pub async fn find_by_id(&self, account_id: i64) -> Result<Option<Account>, sqlx::Error> {
-        tracing::trace!("Searching for account in the repository");
-        sqlx::query_as!(Account, "SELECT * FROM accounts WHERE id = ?", account_id)
-            .fetch_optional(&self.connection)
-            .await
+    pub async fn find(&self, username: &str) -> Result<Option<Account>, sqlx::Error> {
+        sqlx::query_as!(
+            Account,
+            "SELECT * FROM accounts WHERE username = ?",
+            username
+        )
+        .fetch_optional(&self.connection)
+        .await
     }
 
     #[instrument(skip(self, password))]
@@ -55,7 +56,7 @@ impl AccountRepository {
         let password_hash_str = password_hash.to_string();
         let query = sqlx::query_as!(
             Account,
-            "INSERT INTO accounts (username, password_hash) VALUES (?, ?) RETURNING id, username, password_hash, registered_at",
+            "INSERT INTO accounts (username, password_hash) VALUES (?, ?) RETURNING *",
             username,
             password_hash_str,
         );
@@ -119,9 +120,9 @@ impl AccountRepository {
         let session_token_string = session_token.to_string();
         let created_session = sqlx::query_as!(
             Session,
-            "INSERT INTO sessions (token, account_id) VALUES (?, ?) RETURNING *",
+            "INSERT INTO sessions (token, account) VALUES (?, ?) RETURNING *",
             session_token_string,
-            account.id
+            account.username
         )
         .fetch_one(&self.connection)
         .await?;
@@ -131,16 +132,14 @@ impl AccountRepository {
     }
 
     #[instrument(skip(self), err(Debug))]
-    pub async fn expire_session(&self, session_id: i64) -> Result<(), sqlx::Error> {
-        let update_query = sqlx::query!(
-            "UPDATE sessions SET expired = 1 WHERE id = ? RETURNING account_id",
-            session_id
-        );
-        let account_id = update_query.fetch_one(&self.connection).await?.account_id;
-        let owner = sqlx::query!("SELECT username FROM accounts WHERE id = ?", account_id)
-            .fetch_one(&self.connection)
-            .await?;
-        tracing::debug!(owner = owner.username, "Expired session");
+    pub async fn expire_session(&self, session_token: Uuid) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            "UPDATE sessions SET expired = 1 WHERE token = ?",
+            session_token
+        )
+        .execute(&self.connection)
+        .await?;
+        tracing::debug!("Expired session");
         Ok(())
     }
 }

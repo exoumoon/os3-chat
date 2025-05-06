@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use axum::body::Bytes;
 use chrono::NaiveDateTime;
@@ -25,10 +25,10 @@ impl Room {
         let query = sqlx::query_as!(
             Account,
             r#"
-                SELECT a.id, a.username, a.password_hash, a.registered_at
+                SELECT a.username, a.password_hash, a.registered_at
                 FROM accounts a
                 LEFT JOIN room_membership m
-                ON a.id = m.account_id
+                ON a.username = m.member
                 WHERE m.room_id = ?
             "#,
             self.id
@@ -38,59 +38,60 @@ impl Room {
 
     #[instrument(skip_all, fields(room.id = self.id, room.name = self.name), err(Debug))]
     pub async fn get_messages(&self, connection: &SqlitePool) -> Result<Vec<Message>, sqlx::Error> {
-        let query = sqlx::query_as!(
-            Message,
-            r#"
-                SELECT * FROM messages WHERE room_id = ?
-            "#,
-            self.id
-        );
-        query.fetch_all(connection).await
+        sqlx::query_as!(Message, "SELECT * FROM messages WHERE room_id = ?", self.id)
+            .fetch_all(connection)
+            .await
     }
 
-    #[instrument(skip(self, connection, content), err(Debug))]
+    #[instrument(skip(self, connection, text), err(Debug))]
     pub async fn send_new_message(
         &self,
         connection: &SqlitePool,
-        sender_account_id: i64,
-        content: Option<String>,
+        sender: &str,
+        text: Option<String>,
     ) -> Result<Message, sqlx::Error> {
         let query = sqlx::query_as!(
             Message,
-            "INSERT INTO messages (sender_account_id, room_id, content) VALUES (?, ?, ?) RETURNING *",
-            sender_account_id,
+            "INSERT INTO messages (sender, room_id, text) VALUES (?, ?, ?) RETURNING *",
+            sender,
             self.id,
-            content,
+            text,
         );
         query.fetch_one(connection).await
     }
 
-    #[instrument(skip_all, fields(room.id = self.id, room.name = self.name), err(Debug))]
-    pub async fn get_uploads(&self, connection: &SqlitePool) -> Result<Vec<Upload>, sqlx::Error> {
+    #[instrument(skip(self, connection, text), err(Debug))]
+    pub async fn send_new_message_with_file(
+        &self,
+        connection: &SqlitePool,
+        sender: &str,
+        text: Option<String>,
+        file_uuid: Uuid,
+    ) -> Result<Message, sqlx::Error> {
+        let uuid_str = file_uuid.to_string();
         let query = sqlx::query_as!(
-            Upload,
-            r#"
-                SELECT * FROM file_uploads WHERE room_id = ?
-            "#,
-            self.id
+            Message,
+            "INSERT INTO messages (sender, room_id, text, file_upload_uuid) VALUES (?, ?, ?, ?) RETURNING *",
+            sender,
+            self.id,
+            text,
+            uuid_str,
         );
-        query.fetch_all(connection).await
+        query.fetch_one(connection).await
     }
 
-    #[instrument(skip(self, connection, data), err(Debug))]
+    #[instrument(skip_all, fields(filename = ?filename), err(Debug))]
     pub async fn upload(
         &self,
         connection: &SqlitePool,
-        uploader_account_id: i64,
-        room_id: i64,
-        original_filename: &Path,
+        filename: &Path,
         data: &Bytes,
     ) -> Result<Upload, FileUploadError> {
         const DEFAULT_STORE_DIRECTORY: &str = "database/file_uploads/";
 
         let uuid = Uuid::new_v4();
-        let original_filename = original_filename.to_string_lossy();
-        let store_path = format!("{DEFAULT_STORE_DIRECTORY}/{uuid}_{original_filename}");
+        let filename = filename.to_string_lossy();
+        let store_path = format!("{DEFAULT_STORE_DIRECTORY}/{uuid}_{filename}");
 
         let mut store_file = File::create(&store_path)
             .inspect(|_| tracing::debug!(store_path, "Created store file"))
@@ -100,26 +101,21 @@ impl Room {
             .inspect(|()| tracing::debug!(store_path, "Wrote to store path"))
             .inspect_err(|error| tracing::error!(?error, "Failed to write to store path"))?;
 
-        let store_path = PathBuf::from(store_path).canonicalize()?;
-        let store_path = store_path.to_string_lossy();
+        let uuid_string = uuid.to_string();
 
-        let query = sqlx::query_as!(
+        let upload = sqlx::query_as!(
             Upload,
             r#"
-                INSERT INTO file_uploads (uploader_account_id, room_id, original_filename, store_path)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO file_uploads (uuid, filename)
+                VALUES (?, ?)
                 RETURNING *
             "#,
-            uploader_account_id,
-            room_id,
-            original_filename,
-            store_path,
-        );
-
-        let upload = query
-            .fetch_one(connection)
-            .await
-            .map_err(FileUploadError::Database)?;
+            uuid_string,
+            filename,
+        )
+        .fetch_one(connection)
+        .await
+        .map_err(FileUploadError::Database)?;
 
         Ok(upload)
     }

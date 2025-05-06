@@ -10,6 +10,7 @@ pub mod upload;
 pub struct Repository {
     pub accounts: account::AccountRepository,
     pub rooms: room::RoomRepository,
+    pub uploads: upload::UploadRepository,
 }
 
 impl Repository {
@@ -17,7 +18,15 @@ impl Repository {
         let accounts = account::AccountRepository {
             connection: connection.clone(),
         };
-        let rooms = room::RoomRepository { connection };
-        Self { accounts, rooms }
+        let rooms = room::RoomRepository {
+            connection: connection.clone(),
+        };
+        let uploads = upload::UploadRepository { connection };
+
+        Self {
+            accounts,
+            rooms,
+            uploads,
+        }
     }
 }

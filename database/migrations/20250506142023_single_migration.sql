@@ -1,73 +1,62 @@
 -- Tables.
 CREATE TABLE accounts (
-    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    username TEXT NOT NULL UNIQUE CHECK (length(username) > 0),
+    username TEXT NOT NULL UNIQUE PRIMARY KEY,
     password_hash TEXT NOT NULL,
     registered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE sessions (
-    token BYTES NOT NULL PRIMARY KEY,
-    account_id INTEGER NOT NULL,
+    token TEXT NOT NULL PRIMARY KEY,
+    account TEXT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expired BOOLEAN NOT NULL DEFAULT 0,
-    FOREIGN KEY(account_id) REFERENCES accounts(id)
+    FOREIGN KEY(account) REFERENCES accounts(username)
 );
 
 CREATE TABLE rooms (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE CHECK (length(name) > 0),
+    name TEXT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE messages (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    sender_id INTEGER NOT NULL,
+    sender TEXT NOT NULL,
     room_id INTEGER NOT NULL,
-    content TEXT,
+    text TEXT,
     sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    file_upload_id INTEGER,
+    file_upload_uuid TEXT,
 
-    FOREIGN KEY(sender_id) REFERENCES accounts(id),
+    FOREIGN KEY(sender) REFERENCES accounts(username),
     FOREIGN KEY(room_id) REFERENCES rooms(id),
-    FOREIGN KEY(file_upload_id) REFERENCES file_uploads(id)
+    FOREIGN KEY(file_upload_uuid) REFERENCES file_uploads(uuid)
 );
 
 CREATE TABLE room_membership (
-    member_id INTEGER NOT NULL,
+    member TEXT NOT NULL,
     room_id INTEGER NOT NULL,
     joined_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    PRIMARY KEY(member_id, room_id),
-    FOREIGN KEY(member_id) REFERENCES accounts(id),
+    PRIMARY KEY(member, room_id),
+    FOREIGN KEY(member) REFERENCES accounts(username),
     FOREIGN KEY(room_id) REFERENCES rooms(id)
 );
 
 CREATE TABLE file_uploads (
-    uuid     BLOB NOT NULL PRIMARY KEY,
+    uuid     TEXT NOT NULL PRIMARY KEY,
     filename TEXT NOT NULL
 );
 
 -- Create a public room for everyone to be in by default.
-INSERT INTO rooms (name) VALUES ('public');
+INSERT INTO rooms (id, name) VALUES (1, 'public');
 
 CREATE TRIGGER auto_join_public_room
 AFTER INSERT ON accounts
 BEGIN
-    INSERT INTO room_membership (account_id, room_id)
-    VALUES (NEW.id, 1);
+    INSERT INTO room_membership (member, room_id)
+    VALUES (NEW.username, 1);
 END;
 
--- Show a message when somebody uploads a file.
-CREATE TRIGGER insert_message_on_file_upload
-AFTER INSERT ON file_uploads
-BEGIN
-    INSERT INTO messages (sender_account_id, room_id, content, sent_at, file_upload_id)
-    VALUES (
-        NEW.uploader_account_id,
-        NEW.room_id,
-        'Uploaded a file:',
-        CURRENT_TIMESTAMP,
-        NEW.id
-    );
-END;
+-- An inaccessible "admin" account.
+INSERT INTO accounts (username, password_hash) VALUES ('admin', '!');
+INSERT INTO messages (sender, room_id, text) VALUES ('admin', 1, 'system diagnostic, database begins after this message');

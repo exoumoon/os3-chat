@@ -7,6 +7,7 @@ use axum_extra::extract::cookie::Cookie;
 use chrono::NaiveDateTime;
 use sqlx::query;
 use tracing::{Level, instrument};
+use uuid::Uuid;
 
 use crate::state::SharedState;
 
@@ -19,10 +20,9 @@ pub struct Session(pub AuthorizedAccount);
 #[derive(Debug)]
 #[must_use]
 pub struct AuthorizedAccount {
-    pub id: i64,
     pub username: String,
     pub registered_at: NaiveDateTime,
-    pub session_id: i64,
+    pub session_token: Uuid,
 }
 
 impl<S> FromRequestParts<S> for Session
@@ -36,34 +36,35 @@ where
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let state = SharedState::from_ref(state);
         let cookies = CookieJar::from_headers(&parts.headers);
-        let session_token = cookies.get(SESSION_COOKIE_NAME).map(Cookie::value_trimmed);
+        let token: Uuid = cookies
+            .get(SESSION_COOKIE_NAME)
+            .map(Cookie::value_trimmed)
+            .and_then(|v| v.parse().ok())
+            .ok_or(RejectionCause::InvalidSession)?;
 
-        if let Some(token) = session_token {
-            let session_query = query!(
-                "SELECT * FROM sessions WHERE token = ? AND expired = 0",
-                token
-            );
-            let session = session_query
-                .fetch_one(&state.db_pool)
-                .await
-                .map_err(|_| RejectionCause::ExpiredSession)?;
-            let account_record = query!("SELECT * FROM accounts WHERE id = ?", session.account_id)
-                .fetch_one(&state.db_pool)
-                .await
-                .map_err(|_| RejectionCause::InvalidSession)?;
+        let token_string = token.to_string();
+        let session = query!(
+            "SELECT * FROM sessions WHERE token = ? AND expired = 0",
+            token_string
+        )
+        .fetch_one(&state.db_pool)
+        .await
+        .map_err(|_| RejectionCause::ExpiredSession)?;
 
-            let authorized_account = AuthorizedAccount {
-                id: account_record.id,
-                username: account_record.username,
-                registered_at: account_record.registered_at,
-                session_id: session.id,
-            };
+        let account_record = query!("SELECT * FROM accounts WHERE username = ?", session.account)
+            .fetch_one(&state.db_pool)
+            .await
+            .map_err(|_| RejectionCause::InvalidSession)?;
 
-            tracing::trace!(?authorized_account, "Cookie authorization successful");
-            Ok(Self(authorized_account))
-        } else {
-            Err(RejectionCause::NoSessionCookie)
-        }
+        let authorized_account = AuthorizedAccount {
+            username: account_record.username,
+            registered_at: account_record.registered_at,
+            session_token: token,
+        };
+
+        tracing::trace!(?authorized_account, "Cookie-based auth completed");
+
+        Ok(Self(authorized_account))
     }
 }
 

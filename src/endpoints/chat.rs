@@ -24,13 +24,12 @@ pub struct IncomingMessage {
 #[must_use]
 pub struct EchoedMessage {
     pub id: i64,
-    pub sender_username: String,
-    pub sender_id: i64,
+    pub sender: String,
     pub room_id: i64,
     pub text: Option<String>,
     pub sent_at: NaiveDateTime,
-    pub file_upload_original_name: Option<String>,
-    pub file_upload_url: Option<String>,
+    pub upload_filename: Option<String>,
+    pub upload_url: Option<String>,
 }
 
 #[derive(Template)]
@@ -145,7 +144,7 @@ pub async fn websocket(
             // NOTE: Сохраняем полученные данные в БД, получая обратно полноценное
             // отображение новой строки со временем отправки и другими данными.
             let repo_message = room
-                .send_new_message(&state.db_pool, account.id, incoming_message.text)
+                .send_new_message(&state.db_pool, &account.username, incoming_message.text)
                 .await
                 .unwrap();
 

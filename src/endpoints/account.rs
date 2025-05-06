@@ -103,7 +103,7 @@ pub async fn logout(
     state
         .repository
         .accounts
-        .expire_session(account.session_id)
+        .expire_session(account.session_token)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Redirect::to("/"))

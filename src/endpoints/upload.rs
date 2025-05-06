@@ -1,10 +1,12 @@
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use axum::debug_handler;
 use axum::extract::{Multipart, State};
 use axum::http::StatusCode;
 use axum::response::Redirect;
 use tracing::instrument;
+use uuid::Uuid;
 
 use crate::auth::Session;
 use crate::state::SharedState;
@@ -13,7 +15,7 @@ use crate::state::SharedState;
 #[debug_handler]
 pub async fn upload_handler(
     State(state): State<SharedState>,
-    Session(account): Session,
+    Session(uploader): Session,
     mut multipart: Multipart,
 ) -> Result<Redirect, StatusCode> {
     let mut file_data = None;
@@ -57,15 +59,24 @@ pub async fn upload_handler(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::NOT_FOUND)?;
 
-    let _upload = room
-        .upload(
-            &state.db_pool,
-            account.id,
-            room_id,
-            &original_filename,
-            &data,
-        )
+    let upload = room
+        .upload(&state.db_pool, &original_filename, &data)
         .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let uuid = Uuid::from_str(&upload.uuid).unwrap();
+    let message = room
+        .send_new_message_with_file(&state.db_pool, &uploader.username, None, uuid)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let echoed_message = message
+        .to_echoed_message(&state)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let _recv_count = state
+        .broadcast_tx
+        .send(echoed_message)
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Redirect::to(&format!("/chat/{room_id}")))

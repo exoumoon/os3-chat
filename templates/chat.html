@@ -60,13 +60,12 @@
         class ChatMessage {
             constructor(data) {
                 this.id = data.id;
-                this.senderUsername = data.sender_username;
-                this.senderId = data.sender_id;
+                this.sender = data.sender;
                 this.roomId = data.room_id;
                 this.text = data.text;
-                this.sentAt = new Date(data.sent_at);  // Convert to JavaScript Date object
-                this.fileName = data.file_upload_original_name;
-                this.fileUrl = data.file_upload_url;
+                this.sentAt = new Date(data.sent_at);
+                this.uploadFilename = data.upload_filename;
+                this.uploadUrl = data.upload_url;
             }
 
             render() {
@@ -78,10 +77,9 @@
                 const senderInfo = document.createElement('div');
                 senderInfo.classList.add('flex', 'items-center', 'text-sm', 'text-purple-400', 'mb-2');
                 senderInfo.innerHTML
-                    = `<b>${this.senderUsername}</b>&nbsp;-&nbsp;<span class="text-xs">${this.sentAt.toLocaleString()}</span>`;
+                    = `<b>${this.sender}</b>&nbsp;-&nbsp;<span class="text-xs">${this.sentAt.toLocaleString()}</span>`;
                 messageContainer.appendChild(senderInfo);
 
-                // Check if there's a text message or a file
                 if (this.text) {
                     const textMessage = document.createElement('p');
                     textMessage.classList.add('text-gray-100', 'whitespace-pre-wrap');
@@ -89,12 +87,12 @@
                     messageContainer.appendChild(textMessage);
                 }
 
-                if (this.fileUrl && this.fileName) {
+                if (this.uploadUrl && this.uploadFilename) {
                     const fileLink = document.createElement('a');
-                    fileLink.href = `/upload/${this.fileUrl}`;
-                    fileLink.download = this.fileName;
+                    fileLink.href = `/upload/${this.uploadUrl}`;
+                    fileLink.download = this.uploadFilename;
                     fileLink.classList.add('text-blue-400', 'hover:text-blue-300', 'underline', 'mt-2', 'block');
-                    fileLink.textContent = `Download ${this.fileName}`;
+                    fileLink.textContent = `Download ${this.uploadFilename}`;
                     messageContainer.appendChild(fileLink);
                 }
 
