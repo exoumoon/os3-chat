@@ -59,18 +59,28 @@ pub async fn page(
         .ok_or(StatusCode::NOT_FOUND)?;
 
     let mut echoed_messages = vec![];
-    for message in room
-        .get_messages(&state.db_pool)
+    let is_member = room
+        .get_members(&state.db_pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .into_iter()
-        .filter(|msg| msg.room_id == room_id)
-    {
-        let echoed_message = message
-            .to_echoed_message(&state)
+        .any(|m| m.username == account.username);
+    if is_member {
+        for message in room
+            .get_messages(&state.db_pool)
             .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        echoed_messages.push(echoed_message);
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+            .into_iter()
+            .filter(|msg| msg.room_id == room_id)
+        {
+            let echoed_message = message
+                .to_echoed_message(&state)
+                .await
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            echoed_messages.push(echoed_message);
+        }
+    } else {
+        tracing::warn!("User is not a member of this room, retuning no messages");
     }
 
     let initial_messages_json =
@@ -105,8 +115,19 @@ pub async fn websocket(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::NOT_FOUND)?;
+    let is_member = room
+        .get_members(&state.db_pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .into_iter()
+        .any(|m| m.username == account.username);
 
-    Ok(websocket_upgrade.on_upgrade(move |socket| async move {
+    if !is_member {
+        tracing::warn!("User is not a member of this room, rejecting websocket");
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+
+    let callback = move |socket: ws::WebSocket| async move {
         let broadcast_tx = state.broadcast_tx.clone();
         let mut broadcast_rx = broadcast_tx.subscribe();
         let (mut websocket_tx, mut websocket_rx) = socket.split();
@@ -159,5 +180,7 @@ pub async fn websocket(
                 .inspect(|recv_count| tracing::trace!(?recv_count, "Sent data to local broadcast"))
                 .inspect_err(|error| tracing::error!(?error, "Local broadcast TX failed"));
         }
-    }))
+    };
+
+    Ok(websocket_upgrade.on_upgrade(callback))
 }

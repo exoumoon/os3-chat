@@ -69,6 +69,14 @@
                     Invite user
                 </button>
 
+                <!-- NOTE: "Remove user" button -->
+                <button
+                    onclick="removeUser({{ room_id }})"
+                    class="text-sm text-red-400 hover:text-green-300 hover:underline"
+                >
+                    Remove user
+                </button>
+
                 <!-- NOTE: "Logout" button -->
                 <form action="/account/logout" method="post">
                     <button
@@ -258,6 +266,27 @@
                 alert("User invited!");
             } else {
                 alert("Failed to invite user.");
+            }
+        }
+
+        async function removeUser(roomId) {
+            const username = prompt("Enter the username to remove from this room:");
+            if (!username) return;
+
+            const body = new URLSearchParams();
+            body.append("room_id", {{ room_id }});
+            body.append("username", username);
+
+            const res = await fetch("/api/room/kick", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: body.toString(),
+            });
+
+            if (res.ok) {
+                alert("User removed.");
+            } else {
+                alert("Failed to remove user.");
             }
         }
     </script>
