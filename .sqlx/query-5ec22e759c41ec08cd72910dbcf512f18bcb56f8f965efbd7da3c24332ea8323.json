@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO messages (sender, room_id, text) VALUES (?, ?, ?) RETURNING *",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "sender",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "room_id",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "text",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "sent_at",
+        "ordinal": 4,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "file_upload_uuid",
+        "ordinal": 5,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "5ec22e759c41ec08cd72910dbcf512f18bcb56f8f965efbd7da3c24332ea8323"
+}

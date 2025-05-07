@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                SELECT a.username, a.password_hash, a.registered_at\n                FROM accounts a\n                LEFT JOIN room_membership m\n                ON a.username = m.member\n                WHERE m.room_id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "username",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "password_hash",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "registered_at",
+        "ordinal": 2,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "7a6ef8a1a1dd916a01517f8d4d2e284878b51065bd27f284d701ccb2f6c1c958"
+}

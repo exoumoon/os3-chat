@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT * FROM messages WHERE room_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "sender",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "room_id",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "text",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "sent_at",
+        "ordinal": 4,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "file_upload_uuid",
+        "ordinal": 5,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "7a458141d5710f3834b47d4009ca8fcbe9d610e68484f791057fd9f56ea48547"
+}
