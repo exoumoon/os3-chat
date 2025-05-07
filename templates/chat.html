@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en" class="dark h-full">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{ title }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
+
 <body class="bg-[#121212] text-gray-100 font-nunito h-full">
     <div class="flex h-screen overflow-hidden" height="100%">
         <!-- NOTE: Sidebar for rooms -->
@@ -13,6 +15,7 @@
             <h3 class="text-lg">Your chat rooms:</h3>
             <ul id="room-list" class="space-y-2"></ul>
 
+            <!-- NOTE: "Create new room" section -->
             <form id="create-room-form" class="space-y-2 pt-4 border-t border-gray-700">
                 <input
                     name="room_name"
@@ -35,6 +38,7 @@
             <div class="flex justify-between items-center pb-4">
                 <p>Logged in as <b>{{ logged_in_as }}</b></p>
 
+                <!-- NOTE: "File upload" section -->
                 <form
                     id="upload-form"
                     action="/upload"
@@ -57,6 +61,7 @@
                     </button>
                 </form>
 
+                <!-- NOTE: "Invite user" button -->
                 <button
                     onclick="inviteUser({{ room_id }})"
                     class="text-sm text-green-400 hover:text-green-300 hover:underline"
@@ -64,6 +69,7 @@
                     Invite user
                 </button>
 
+                <!-- NOTE: "Logout" button -->
                 <form action="/account/logout" method="post">
                     <button
                         type="submit"
@@ -74,6 +80,7 @@
                 </form>
             </div>
 
+            <!-- NOTE: Message input field -->
             <div class="flex">
                 <input
                     id="message_text_input"
@@ -82,6 +89,7 @@
                 />
             </div>
 
+            <!-- NOTE: Messages in the room -->
             <ul id="messages" class="pt-2 space-y-2"></ul>
         </main>
     </div>
@@ -254,4 +262,5 @@
         }
     </script>
 </body>
+
 </html>
