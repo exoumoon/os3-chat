@@ -10,7 +10,7 @@ CREATE TABLE sessions (
     account TEXT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expired BOOLEAN NOT NULL DEFAULT 0,
-    FOREIGN KEY(account) REFERENCES accounts(username)
+    FOREIGN KEY(account) REFERENCES accounts(username) ON DELETE CASCADE
 );
 
 CREATE TABLE rooms (
@@ -27,9 +27,9 @@ CREATE TABLE messages (
     sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     file_upload_uuid TEXT,
 
-    FOREIGN KEY(sender) REFERENCES accounts(username),
-    FOREIGN KEY(room_id) REFERENCES rooms(id),
-    FOREIGN KEY(file_upload_uuid) REFERENCES file_uploads(uuid)
+    FOREIGN KEY(sender) REFERENCES accounts(username) ON DELETE CASCADE,
+    FOREIGN KEY(room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+    FOREIGN KEY(file_upload_uuid) REFERENCES file_uploads(uuid) ON DELETE CASCADE
 );
 
 CREATE TABLE room_membership (
@@ -38,8 +38,8 @@ CREATE TABLE room_membership (
     joined_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     PRIMARY KEY(member, room_id),
-    FOREIGN KEY(member) REFERENCES accounts(username),
-    FOREIGN KEY(room_id) REFERENCES rooms(id)
+    FOREIGN KEY(member) REFERENCES accounts(username) ON DELETE CASCADE,
+    FOREIGN KEY(room_id) REFERENCES rooms(id) ON DELETE CASCADE
 );
 
 CREATE TABLE file_uploads (
@@ -60,3 +60,6 @@ END;
 -- An inaccessible "admin" account.
 INSERT INTO accounts (username, password_hash) VALUES ('admin', '!');
 INSERT INTO messages (sender, room_id, text) VALUES ('admin', 1, 'system diagnostic, database begins after this message');
+DELETE FROM messages WHERE room_id = 1;
+INSERT INTO messages (sender, room_id, text) VALUES ('admin', 1, 'system diagnostic, database begins after this message');
+DELETE FROM accounts WHERE username = 'admin';
