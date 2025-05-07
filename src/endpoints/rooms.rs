@@ -29,7 +29,8 @@ pub async fn list(
         .rooms
         .find_by_member(&requester.username)
         .await
-        .inspect(|rooms| tracing::debug!(count = rooms.len(), "Returning list of rooms via API"))
+        .inspect(|rooms| tracing::debug!(count = rooms.len(), "Returning list of rooms"))
+        .inspect_err(|error| tracing::error!(?error, "Failed to get user's rooms"))
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .into_iter()
         .map(|db_room| RoomResponseEntry {
@@ -66,6 +67,8 @@ pub async fn create(
 
     room.add_member(&state.db_pool, &requester.username)
         .await
+        .inspect(|()| tracing::debug!("Added member to room"))
+        .inspect_err(|error| tracing::error!(?error, "Failed to add member to room"))
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(StatusCode::CREATED)
@@ -73,7 +76,7 @@ pub async fn create(
 
 #[derive(Deserialize, Validate, Debug)]
 #[must_use]
-pub struct InviteUserForm {
+pub struct MemberModificationForm {
     #[validate(length(min = 1, max = 64))]
     username: String,
     room_id: i64,
@@ -84,7 +87,7 @@ pub struct InviteUserForm {
 pub async fn invite(
     State(state): State<SharedState>,
     Session(requester): Session,
-    Valid(form): Valid<Form<InviteUserForm>>,
+    Valid(form): Valid<Form<MemberModificationForm>>,
 ) -> Result<StatusCode, StatusCode> {
     let room = state
         .repository
@@ -96,7 +99,33 @@ pub async fn invite(
 
     room.add_member(&state.db_pool, &form.username)
         .await
+        .inspect(|()| tracing::debug!("Added member to room"))
+        .inspect_err(|error| tracing::error!(?error, "Failed to add member to room"))
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(StatusCode::CREATED)
+}
+
+#[instrument(skip_all, fields(requester.username = requester.username, form = ?form))]
+#[debug_handler]
+pub async fn kick_out(
+    State(state): State<SharedState>,
+    Session(requester): Session,
+    Valid(form): Valid<Form<MemberModificationForm>>,
+) -> Result<StatusCode, StatusCode> {
+    let room = state
+        .repository
+        .rooms
+        .find_by_id(form.room_id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    room.remove_member(&state.db_pool, &form.username)
+        .await
+        .inspect(|()| tracing::debug!("Deleted member from room"))
+        .inspect_err(|error| tracing::error!(?error, "Failed to delete user from room"))
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(StatusCode::OK)
 }

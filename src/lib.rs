@@ -47,25 +47,26 @@ pub async fn run(settings: Settings) -> Result<(), color_eyre::eyre::Report> {
         broadcast_tx,
     };
 
-    let file_router = Router::new()
+    let upload_router = Router::new()
         .route("/upload", post(endpoints::upload::upload_handler))
         .route("/upload/{uuid}", get(endpoints::upload::download_handler))
         .layer(DefaultBodyLimit::max(GIGABYTE));
 
-    let room_router = Router::new()
+    let room_api_router = Router::new()
         .route("/create", post(endpoints::rooms::create))
         .route("/invite", post(endpoints::rooms::invite))
+        .route("/kick", post(endpoints::rooms::kick_out))
         .route("/list", get(endpoints::rooms::list));
 
     let protected_router = Router::new()
-        .merge(file_router)
-        .nest("/api/room/", room_router)
+        .merge(upload_router)
+        .nest("/api/room/", room_api_router)
         .route("/account/logout", post(endpoints::account::logout))
         .route("/chat/{room_id}", get(endpoints::chat::page))
         .route("/chat/{room_id}/websocket", any(endpoints::chat::websocket))
         .route_layer(from_extractor_with_state::<auth::Session, _>(state.clone()));
 
-    let router = Router::new()
+    let toplevel_router = Router::new()
         .merge(protected_router)
         .route("/", get(|| async { Redirect::to("/chat/1") }))
         .route("/account", get(endpoints::account::page))
@@ -75,7 +76,7 @@ pub async fn run(settings: Settings) -> Result<(), color_eyre::eyre::Report> {
 
     let listener = TcpListener::bind(settings.socket_addr).await?;
     tracing::info!(listen_addr = ?listener.local_addr()?, "Bound to local socket");
-    axum::serve(listener, router)
+    axum::serve(listener, toplevel_router)
         .with_graceful_shutdown(self::shutdown_signal())
         .await?;
 

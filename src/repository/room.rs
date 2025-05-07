@@ -20,18 +20,6 @@ pub struct Room {
 }
 
 impl Room {
-    #[instrument(skip_all, fields(username = username), err(Debug))]
-    pub async fn add_member(&self, connection: &SqlitePool, username: &str) -> sqlx::Result<()> {
-        sqlx::query!(
-            "INSERT INTO room_membership (member, room_id) VALUES (?, ?)",
-            username,
-            self.id
-        )
-        .execute(connection)
-        .await?;
-        Ok(())
-    }
-
     #[instrument(skip_all, fields(room.id = self.id, room.name = self.name), err(Debug))]
     pub async fn get_members(&self, connection: &SqlitePool) -> Result<Vec<Account>, sqlx::Error> {
         let query = sqlx::query_as!(
@@ -46,6 +34,30 @@ impl Room {
             self.id
         );
         query.fetch_all(connection).await
+    }
+
+    #[instrument(skip_all, fields(username = username), err(Debug))]
+    pub async fn add_member(&self, connection: &SqlitePool, username: &str) -> sqlx::Result<()> {
+        sqlx::query!(
+            "INSERT INTO room_membership (member, room_id) VALUES (?, ?)",
+            username,
+            self.id
+        )
+        .execute(connection)
+        .await?;
+        Ok(())
+    }
+
+    #[instrument(skip_all, fields(username = username), err(Debug))]
+    pub async fn remove_member(&self, connection: &SqlitePool, username: &str) -> sqlx::Result<()> {
+        sqlx::query!(
+            "DELETE FROM room_membership WHERE member = ? AND room_id = ?",
+            username,
+            self.id
+        )
+        .execute(connection)
+        .await?;
+        Ok(())
     }
 
     #[instrument(skip_all, fields(room.id = self.id, room.name = self.name), err(Debug))]
